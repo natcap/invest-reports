@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=64", "wheel", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "invest-reports"
+# Allow setuptools_scm to derive the version dynamically from the git metadata
+# Using setuptools_scm is not required, but we highly recommend it
+dynamic = ["version"]  
+dependencies = [
+  "natcap.invest>=3.16.2",
+  "marimo"
+]
+
+[tool.setuptools_scm]
+# Use default configuration. A warning is issued if this section is absent.
