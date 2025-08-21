@@ -13,23 +13,14 @@ app = marimo.App(width="medium", app_title="SDR explore")
 
 @app.cell
 def _():
-    import math
     import os
 
     import geopandas
-    import geometamaker
     import marimo as mo
-    import matplotlib.pyplot as plt
-    from natcap.invest.sdr import sdr
     from natcap.invest import datastack
-    from natcap.invest import spec
     import natcap.invest.utils
 
-    import pandas
-    import pygeoprocessing
-    import yaml
-
-    import utils
+    from invest_reports import utils
     return datastack, geopandas, mo, natcap, os, utils
 
 
