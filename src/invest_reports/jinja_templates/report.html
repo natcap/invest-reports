@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ page_title }}</title>
+  {% include 'styles.html' %}
+</head>
+<body>
+  <div class="report-container">
+    {% set accordion_panel_num = 1 %}
+
+    <h1>{{ page_title }}</h1>
+    <p>This report summarizes the results of running the {{ model_name }} model.</p>
+    <p>It was generated at {{ timestamp }}.</p>
+
+    <h2>Inputs</h2>
+
+    {% set accordion_panel_id = ['accordion-panel-', accordion_panel_num]|join %}
+    {% set accordion_panel_num = accordion_panel_num + 1 %}
+    {% include 'args-table-section.html' %}
+
+    {% set img_src = inputs_img_src %}
+    {% set section_heading = 'Geospatial Inputs' %}
+    {% set accordion_panel_id = ['accordion-panel-', accordion_panel_num]|join %}
+    {% set accordion_panel_num = accordion_panel_num + 1 %}
+    {% include 'raster-plot-section.html' %}
+
+    <h2>Outputs</h2>
+
+    {% set img_src = outputs_img_src %}
+    {% set section_heading = 'Primary Outputs' %}
+    {% set accordion_panel_id = ['accordion-panel-', accordion_panel_num]|join %}
+    {% set accordion_panel_num = accordion_panel_num + 1 %}
+    {% include 'raster-plot-section.html' %}
+
+    {% set img_src = intermediate_outputs_img_src %}
+    {% set section_heading = intermediate_outputs_heading %}
+    {% set accordion_panel_id = ['accordion-panel-', accordion_panel_num]|join %}
+    {% set accordion_panel_num = accordion_panel_num + 1 %}
+    {% include 'raster-plot-section.html' %}
+
+  </div>
+  {% include 'accordion-js.html' %}
+</body>
+</html>
