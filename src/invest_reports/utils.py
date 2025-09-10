@@ -134,7 +134,7 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
     return fig
 
 
-def plot_raster_facets(tif_list, datatype, transform=None):
+def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     """Plot a list of rasters that will all share a fixed colorscale.
 
     When all the rasters have the same shape and represent the same variable,
@@ -180,9 +180,10 @@ def plot_raster_facets(tif_list, datatype, transform=None):
         cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
     else:
         normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
-    for arr, ax in zip(ndarray, axes.flatten()):
+    for arr, ax, subtitle in zip(ndarray, axes.flatten(), subtitle_list):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
-        ax.set(title=f"{os.path.basename(tif)}{'*' if resampled else ''}")
+        ax.set(
+            title=f"{os.path.basename(tif)}{'*' if resampled else ''}\n{subtitle}")
         fig.colorbar(mappable, ax=ax)
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
