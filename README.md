@@ -18,4 +18,4 @@ To see an example:
     - jinja2
     - matplotlib
 4. Run the report generator, e.g. on macOS: `python3 ndr_report_generator.py`.
-5. Use any web browser to open the resulting HTML document, `ndr.html`, which can be found in the `html` folder.
+5. Find the resulting HTML document, `ndr[_suffix].html`, which can be found in the workspace folder (alongside the logfile you specified in step 2). Open the HTML document in any web browser.

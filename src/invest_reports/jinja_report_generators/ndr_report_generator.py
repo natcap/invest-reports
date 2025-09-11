@@ -70,7 +70,8 @@ stream_network_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
     intermediate_raster_list)
 
 # Generate HTML document.
-with open(f'../html/{model_name.lower()}.html', 'w') as target_file:
+with open(os.path.join(workspace, f'{model_name.lower()}{suffix_str}.html'),
+          'w') as target_file:
     target_file.write(template.render(
         page_title=f'InVEST Results: {model_name}',
         model_name=model_name,
