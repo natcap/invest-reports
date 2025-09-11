@@ -10,6 +10,8 @@ import marimo as mo
 import pandas
 import yaml
 from osgeo import gdal
+from io import BytesIO
+import base64
 
 
 MATPLOTLIB_PARAMS = {
@@ -21,6 +23,16 @@ MATPLOTLIB_PARAMS = {
 plt.rcParams.update(MATPLOTLIB_PARAMS)
 
 FIGURE_WIDTH = 12
+
+
+class RasterPlotConfig:
+    def __init__(self,
+                 raster_path: str,
+                 datatype: str,
+                 transform: str | None = None):
+        self.raster_path = raster_path
+        self.datatype = datatype
+        self.transform = transform if not None else 'linear'
 
 
 def read_masked_array(filepath, resample_method):
@@ -68,10 +80,11 @@ def _choose_n_rows_n_cols(map_bbox, n_plots):
     xy_ratio = (map_bbox[2] - map_bbox[0]) / (map_bbox[3] - map_bbox[1])
     if xy_ratio <= 1:
         n_cols = 3
-    if xy_ratio > 1:
-        n_cols = 2
-    if xy_ratio > 4:
+    elif xy_ratio > 4:
         n_cols = 1
+    elif xy_ratio > 1:
+        n_cols = 2
+
     if n_cols > n_plots:
         n_cols = n_plots
     n_rows = int(math.ceil(n_plots / n_cols))
@@ -132,6 +145,48 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
         fig.colorbar(mappable, ax=ax)
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
+
+
+def base64_encode(figure):
+    """Encode a Matplotlib-generated figure as a base64 string.
+
+    Args:
+        figure (matplotlib.Figure): the figure to encode.
+
+    Returns:
+        A string representing the figure as a base64-encoded PNG.
+    """
+    figfile = BytesIO()
+    figure.savefig(figfile, format='png')
+    figfile.seek(0)  # rewind to beginning of file
+    return base64.b64encode(figfile.getvalue()).decode('utf-8')
+
+
+def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
+    """Plot and base-64-encode a list of rasters.
+
+    Args:
+        raster_dtype_list (list[RasterPlotConfig]): a list of RasterPlotConfig
+            objects, each of which contains the path to a raster, the type
+            of data in the raster ('continuous', 'divergent', 'nominal', or
+            'binary'), and the transformation to apply to the colormap
+            ('linear' or 'log').
+
+    Returns:
+        A string representing a base64-encoded PNG in which each of the
+            provided rasters is plotted as a subplot.
+    """
+    raster_path_list = [x.raster_path for x in raster_list]
+    datatype_list = [x.datatype for x in raster_list]
+    transform_list = [x.transform for x in raster_list]
+
+    figure = plot_raster_list(
+        raster_path_list,
+        datatype_list,
+        transform_list
+    )
+
+    return base64_encode(figure)
 
 
 def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
