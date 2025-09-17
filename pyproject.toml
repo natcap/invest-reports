@@ -9,7 +9,8 @@ name = "invest-reports"
 dynamic = ["version"]  
 dependencies = [
   "natcap.invest>=3.16.2",
-  "marimo"
+  "matplotlib",
+  "jinja2"
 ]
 
 [tool.setuptools_scm]
