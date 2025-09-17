@@ -1,17 +1,16 @@
+import base64
 import math
 import os
+from io import BytesIO
 
 import geometamaker
 import numpy
 import pygeoprocessing
 import matplotlib
 import matplotlib.pyplot as plt
-import marimo as mo
 import pandas
 import yaml
 from osgeo import gdal
-from io import BytesIO
-import base64
 
 
 MATPLOTLIB_PARAMS = {
