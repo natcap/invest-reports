@@ -129,42 +129,49 @@ def _(altair, exposure_geo, landmass_geo, rank_vars):
     _pt_size = altair.param(bind=_pt_size_slider, value=12)
 
     _null_checkbox = altair.binding_checkbox(name='show null')
-    _param_checkbox = altair.param(bind=_null_checkbox)
+    _param_checkbox = altair.param(value=False, bind=_null_checkbox)
 
-    _points = altair.Chart(exposure_geo).transform_calculate(
+    base_points = altair.Chart(exposure_geo).transform_calculate(
         lon="datum.geometry.coordinates[0]",
-        lat="datum.geometry.coordinates[1]"
-    ).mark_circle(
-        filled=False,
-        strokeWidth=0.5,
-        size=_pt_size,
-        invalid=altair.condition(_param_checkbox,
-            'show', 'filter')
+        lat="datum.geometry.coordinates[1]",
     ).project(
         type='identity',
         reflectY=True # Canvas and SVG treats positive y as down
+    )
+
+    tooltip = altair.Tooltip(
+        ['exposure', 'population'] + rank_vars, format='.2f')
+
+    _points = base_points.transform_filter(
+        altair.expr.isValid(altair.datum.exposure)
+    ).mark_circle(
+        filled=False,
+        strokeWidth=0.5,
     ).encode(
         longitude='lon:Q',
         latitude='lat:Q',
-        # color='exposure:Q'
-        # color=altair.Color('exposure:Q').scale(scheme='plasma', reverse=True).bin(maxbins=4),
-        color=altair.condition(
-            'isValid(datum.exposure)',
-            altair.Color('exposure:Q').scale(scheme='plasma', reverse=True).bin(maxbins=4),
-            altair.value('gray'),
-        ),
-        # color=altair.when(predicate).then(altair.value('blue')).otherwise(altair.value('red')),
-        tooltip=altair.Tooltip(
-            ['exposure'] + rank_vars, format='.2f')
-    ).add_params(_pt_size, _param_checkbox)# .interactive()
+        size='population:Q',
+        color=altair.Color('exposure:Q').scale(scheme='plasma', reverse=True).bin(maxbins=4),
+        tooltip=tooltip
+    )
 
-    # _null_points = _points.encode(
-    #     color=altair.Color('exposure:O').scale(altair.Scale(range=['gray']))
-    # ).transform_filter(
-    #     '!isValid(datum.exposure)'
-    # )
+    _null_points = base_points.add_params(
+        _param_checkbox
+    ).transform_filter(
+        _param_checkbox & ~altair.expr.isValid(altair.datum.exposure)
+    ).mark_circle(
+        filled=False,
+        strokeWidth=0.5,
+        color='gray',
+        invalid='show'
+    ).encode(
+        longitude='lon:Q',
+        latitude='lat:Q',
+        size='population:Q',
+        tooltip=tooltip
+    )
 
-    _map = _landmass + _points
+    _map = _landmass + _null_points + _points
     _map
 
     # _histogram = altair.Chart(exposure_geo).mark_bar().encode(
