@@ -1,0 +1,40 @@
+<section
+  class="accordion-section {{ 'open' if accordions_open_on_load else '' }}"
+>
+  <h3 class="accordion-header">
+    <button
+      class="accordion-button"
+      aria-expanded="{{ 'true' if accordions_open_on_load else 'false' }}"
+      aria-controls="{{ accordion_panel_id }}"
+    >
+      {{ section_heading }}
+    </button>
+  </h3>
+  <div
+    class="accordion-content"
+    id="{{ accordion_panel_id }}"
+  >
+    <div id="vis"></div>
+    <script type="text/javascript">
+      const spec = {{ chart_spec|safe }};
+      const embedOpt = {"mode": "vega-lite"};
+
+      function showError(el, error) {
+        el.innerHTML = ('<div style="color:red;">'
+                        + '<p>JavaScript Error: ' + error.message + '</p>'
+                        + "<p>This usually means there's a typo in your chart specification. "
+                        + "See the javascript console for the full traceback.</p>"
+                        + '</div>');
+        throw error;
+      }
+      const el = document.getElementById('vis');
+      vegaEmbed('#vis', spec, embedOpt)
+        .then(function (result) {
+          // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view
+          // console.log(result.view.padding())
+          // result.view.padding({"left": 0, "right": 0, "bottom": 0, "top": 0})
+        })
+        .catch(error => showError(el, error));
+    </script>
+  </div>
+</section>
