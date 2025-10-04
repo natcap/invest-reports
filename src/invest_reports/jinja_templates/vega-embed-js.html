@@ -1,0 +1,20 @@
+<script type="text/javascript">
+  function embedVega(chart_spec, elId) {
+    function showError(el, error) {
+      el.innerHTML = ('<div style="color:red;">'
+                      + '<p>JavaScript Error: ' + error.message + '</p>'
+                      + "<p>This usually means there's a typo in your chart specification. "
+                      + "See the javascript console for the full traceback.</p>"
+                      + '</div>');
+      throw error;
+    }
+    let el = document.getElementById(elId);
+    vegaEmbed('#'+elId, chart_spec, {"mode": "vega-lite"})
+      .then(function (result) {
+        // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view
+        // console.log(result.view.padding())
+        // result.view.padding({"left": 0, "right": 0, "bottom": 0, "top": 0})
+      })
+      .catch(error => showError(el, error));
+  }
+</script>

@@ -11,6 +11,12 @@ from invest_reports.utils import RasterPlotConfig
 import geopandas
 import pandas
 
+# perform transformations before embedding
+# data in the chart's spec in order to conserve space
+# altair.data_transformers.enable("vegafusion")
+# default max rows is 5000. This seems to have no impact
+# when using the vegafusion transformer though.
+altair.data_transformers.disable_max_rows()
 
 # Locate report template.
 env = Environment(
@@ -24,9 +30,21 @@ model_name = 'Coastal Vulnerability'
 timestamp = time.strftime('%Y-%m-%d %H:%M')
 
 stroke_width = 0.75
-point_fill = True
+# When points are low-density, fill is nicer, or a thicker stroke.
+# But when high-density, there's too much overplotting
+# and no fill is better with a thinner stroke
+# TODO: solve for this somehow? Or add a widget?
+point_fill = False
+if not point_fill:
+    stroke_width = 1.5
+
 point_size = 20
-map_width = 600  # pixels
+map_width = 400  # pixels
+
+legend_config = {
+    'orient': 'left',
+    'gradientLength': 100
+}
 
 
 def get_geojson_bbox(geodataframe):
@@ -74,6 +92,20 @@ def chart_base_points(geodataframe):
         latitude='lat:Q',
     )
     return base_points
+
+
+def chart_wave_energy(wave_energy_geo):
+    base_points = chart_base_points(wave_energy_geo)
+
+    points = base_points.mark_circle(
+        filled=point_fill,
+        strokeWidth=stroke_width,
+    ).encode(
+        color='max_E_type:N',
+        size='wave:Q'
+    )
+
+    return points
 
 
 def report(logfile_path):
@@ -150,15 +182,9 @@ def report(logfile_path):
     exposure_map = landmass + _null_points + exposure_points
     exposure_map = exposure_map.properties(
         width=map_width,
-        height=map_width / xy_ratio
-    ).configure_legend(
-        orient='left',
-        gradientVerticalMaxLength=100,
-    )
-    # exposure_map_svg_src = os.path.join(images_dir, 'exposure_map.svg')
-    # exposure_map_html_path = os.path.join(images_dir, 'exposure_map.html')
-    # exposure_map.save(exposure_map_svg_src)
-    # exposure_map.save(exposure_map_html_path)
+        height=map_width / xy_ratio,
+        title='coastal exposure'
+    ).configure_legend(**legend_config)
     exposure_map_json = exposure_map.to_json()
 
     habitat_df = pandas.read_csv(file_registry['habitat_protection'])
@@ -173,11 +199,11 @@ def report(logfile_path):
                 hab_list.append(h)
         return ','.join(hab_list)
     habitat_geo['hab_presence'] = habitat_geo.apply(concat_habitats, axis=1)
-    
+
     habitat_radio = altair.binding_radio(
         options=['All'] + list(habitats),
         labels=['All'] + list(habitats),
-        name='Filter habitats:'
+        name='Show points protected by each habitat:'
     )
     hab_param = altair.param(value='All', bind=habitat_radio)
 
@@ -201,12 +227,36 @@ def report(logfile_path):
     habitat_map = landmass + habitat_points
     habitat_map = habitat_map.properties(
         width=map_width,
-        height=map_width / xy_ratio
-    ).configure_legend(
-        orient='left',
-        gradientVerticalMaxLength=100,
-    )
+        height=map_width / xy_ratio,
+        title='The role of habitat in reducing coastal exposure'
+    ).configure_legend(**legend_config)
     habitat_map_json = habitat_map.to_json()
+
+    exposure_histogram = altair.Chart(exposure_geo).mark_bar().encode(
+        x=altair.X('exposure:Q', title='coastal exposure').bin(step=0.2),
+        y='count()',
+        color=altair.Color(
+            'exposure:Q',
+            legend=None,
+        ).scale(scheme='plasma', reverse=True).bin(maxbins=4)
+    ).properties(
+        width=map_width,
+        height=200
+    )
+    exposure_histogram_json = exposure_histogram.to_json()
+
+    intermediate_df = pandas.read_csv(file_registry['intermediate_exposure_csv'])
+    wave_energy_geo = geopandas.read_file(file_registry['wave_energies'])
+    wave_energy_geo = wave_energy_geo.join(
+        intermediate_df[['shore_id', 'wave']].set_index('shore_id'), on='shore_id')
+    wave_points = chart_wave_energy(wave_energy_geo)
+    wave_energy_map = landmass + wave_points
+    wave_energy_map = wave_energy_map.properties(
+        width=map_width,
+        height=map_width / xy_ratio,
+        title='Exposure to wind-driven waves vs. open ocean waves'
+    ).configure_legend(**legend_config)
+    wave_energy_map_json = wave_energy_map.to_json()
 
     # # Plot inputs.
     # inputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters([
@@ -225,11 +275,14 @@ def report(logfile_path):
             args_dict=args_dict,
             exposure_map_json=exposure_map_json,
             habitat_map_json=habitat_map_json,
+            exposure_histogram_json=exposure_histogram_json,
+            wave_energy_map_json=wave_energy_map_json,
             accordions_open_on_load=True,
             accent_color='lemonchiffon'
         ))
 
 
 if __name__ == '__main__':
+    # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
     logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-01--15_17_00.txt'
     report(logfile_path)
