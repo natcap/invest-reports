@@ -1,5 +1,0 @@
-{% macro new_accordion_panel_id() -%}
-  {% set accordion_panel_id = ['accordion-panel-', globals.accordion_panel_num]|join %}
-  {% set globals.accordion_panel_num = globals.accordion_panel_num + 1 %}
-  {{ accordion_panel_id }}
-{%- endmacro %}
