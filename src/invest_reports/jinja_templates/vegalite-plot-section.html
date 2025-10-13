@@ -1,24 +1,7 @@
-<section
-  class="accordion-section {{ 'open' if accordions_open_on_load else '' }}"
->
-  <h3 class="accordion-header">
-    <button
-      class="accordion-button"
-      aria-expanded="{{ 'true' if accordions_open_on_load else 'false' }}"
-      aria-controls="{{ accordion_panel_id }}"
-    >
-      {{ section_heading }}
-    </button>
-  </h3>
-  <div
-    class="accordion-content"
-    id="{{ accordion_panel_id }}"
-  >
-    {% for chart_spec in chart_spec_list %}
-      <div id="vis_{{ loop.index0 }}_{{ accordion_panel_id }}"></div>
-      <script type="text/javascript">
-        embedVega({{ chart_spec|safe }}, "vis_{{ loop.index0 }}_{{ accordion_panel_id }}")
-      </script>
-    {% endfor %}
-  </div>
-</section>
+<html>
+  {% for chart_spec, el_id in chart_spec_id_list %}
+    <script type="text/javascript">
+      embedVega({{ chart_spec|safe }}, "{{ el_id }}")
+    </script>
+  {% endfor %}
+</html>

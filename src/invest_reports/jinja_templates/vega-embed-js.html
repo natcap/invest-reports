@@ -9,7 +9,11 @@
       throw error;
     }
     let el = document.getElementById(elId);
-    vegaEmbed('#'+elId, chart_spec, {"mode": "vega-lite"})
+    vegaEmbed('#'+elId, chart_spec, {
+      // https://vega.github.io/vega-embed/#options
+      "mode": "vega-lite",
+      "scaleFactor": { png: 2 }, // scale on export
+    })
       .then(function (result) {
         // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view
         // console.log(result.view.padding())

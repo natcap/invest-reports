@@ -3,13 +3,15 @@ import os
 import time
 
 import altair
-from jinja2 import Environment, PackageLoader, select_autoescape
-import natcap.invest.utils
-from natcap.invest import datastack
-import invest_reports.utils
-from invest_reports.utils import RasterPlotConfig
 import geopandas
 import pandas
+from jinja2 import Environment, PackageLoader, select_autoescape
+import natcap.invest.utils
+import natcap.invest.datastack
+from natcap.invest.coastal_vulnerability import MODEL_SPEC
+
+import invest_reports.utils
+from invest_reports.utils import RasterPlotConfig
 
 # perform transformations before embedding
 # data in the chart's spec in order to conserve space
@@ -39,9 +41,11 @@ if not point_fill:
     stroke_width = 1.5
 
 point_size = 20
-map_width = 400  # pixels
+map_width = 450  # pixels
 
 legend_config = {
+    'labelFontSize': 14,
+    'titleFontSize': 14,
     'orient': 'left',
     'gradientLength': 100
 }
@@ -94,6 +98,55 @@ def chart_base_points(geodataframe):
     return base_points
 
 
+def chart_map_hist(geodataframe, cols, basemap):
+    variable_select = altair.binding_selection(name='select variable')
+    scale_population = altair.param(value='', bind=variable_select)
+
+    repeated_points = altair.Chart(
+        geodataframe.dropna(subset=['exposure'])
+    ).transform_calculate(
+        lon="datum.geometry.coordinates[0]",
+        lat="datum.geometry.coordinates[1]",
+    ).transform_fold(cols).project(
+        type='identity',
+        reflectY=True  # Canvas and SVG treats positive y as down
+    ).mark_circle().encode(
+        longitude='lon:Q',
+        latitude='lat:Q',
+        color=altair.Color(
+            'value:Q',
+            legend=altair.Legend(title='rank')
+        ).scale(scheme='plasma', reverse=True).bin(extent=[1, 5], step=1),
+    )
+    return repeated_points.facet(
+        facet=altair.Facet('key:Q', title=None, header=altair.Header(labelFontSize=0)),
+        columns=3
+    )
+
+
+def chart_repeat_points(geodataframe, cols, basemap):
+    repeated_points = altair.Chart(
+        geodataframe.dropna(subset=['exposure'])
+    ).transform_calculate(
+        lon="datum.geometry.coordinates[0]",
+        lat="datum.geometry.coordinates[1]",
+    ).transform_fold(cols).project(
+        type='identity',
+        reflectY=True  # Canvas and SVG treats positive y as down
+    ).mark_circle().encode(
+        longitude='lon:Q',
+        latitude='lat:Q',
+        color=altair.Color(
+            'value:Q',
+            legend=altair.Legend(title='rank')
+        ).scale(scheme='plasma', reverse=True).bin(extent=[1, 5], step=1),
+    )
+    return repeated_points.facet(
+        facet=altair.Facet('key:Q', title=None), # , header=altair.Header(labelFontSize=0)),
+        columns=3
+    )
+
+
 def chart_wave_energy(wave_energy_geo):
     base_points = chart_base_points(wave_energy_geo)
 
@@ -109,7 +162,7 @@ def chart_wave_energy(wave_energy_geo):
 
 
 def report(logfile_path):
-    _, ds_info = datastack.get_datastack_info(logfile_path)
+    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
     args_dict = ds_info.args
     workspace = args_dict['workspace_dir']
     suffix_str = natcap.invest.utils.make_suffix_string(args_dict, 'results_suffix')
@@ -208,6 +261,9 @@ def report(logfile_path):
     hab_param = altair.param(value='All', bind=habitat_radio)
 
     # TODO: can all maps reference the same json point dataset to save space?
+    # Charts that are concatenated into the same specification will. Charts spread
+    # across specs will not. Perhaps charts spread across specs could, but it
+    # probably requires ditching altair and constructing the vegalite specs another way.
     habitat_base_points = chart_base_points(habitat_geo)
 
     habitat_points = habitat_base_points.add_params(
@@ -231,6 +287,9 @@ def report(logfile_path):
         title='The role of habitat in reducing coastal exposure'
     ).configure_legend(**legend_config)
     habitat_map_json = habitat_map.to_json()
+    habitat_params_df = pandas.read_csv(args_dict['habitat_table_path'])
+    habitat_table_description = f'Rank = {MODEL_SPEC.get_input(
+        'habitat_table_path').get_column('rank').about}'
 
     exposure_histogram = altair.Chart(exposure_geo).mark_bar().encode(
         x=altair.X('exposure:Q', title='coastal exposure').bin(step=0.2),
@@ -245,7 +304,40 @@ def report(logfile_path):
     )
     exposure_histogram_json = exposure_histogram.to_json()
 
+    base_rank_vars_spec = base_points.mark_circle(
+        filled=point_fill,
+        strokeWidth=stroke_width,
+        size=point_size
+    )
+    rank_vars_spec_list = []
+    for var in rank_vars:
+        point_spec = base_rank_vars_spec.encode(
+            color=altair.Color(f'{var}:Q').scale(scheme='plasma', reverse=True),
+        )
+        rank_vars_spec_list.append(
+            altair.layer(landmass, point_spec).properties(
+                title=var))
+    
+    n_cols = len(rank_vars) // 2
+    rank_vars_figure = altair.vconcat(
+        altair.hconcat(*rank_vars_spec_list[:n_cols]),
+        altair.hconcat(*rank_vars_spec_list[n_cols:])
+    )
+    rank_vars_figure_json = rank_vars_figure.to_json()
+
+    intermediate_vars = ['relief', 'wind', 'wave', 'surge']
     intermediate_df = pandas.read_csv(file_registry['intermediate_exposure_csv'])
+    facetted_histograms = altair.Chart(intermediate_df).mark_bar().encode(
+        altair.X(
+            altair.repeat('column'),
+            type='quantitative',
+            bin=altair.Bin(nice=True)),
+        y='count()'
+    ).repeat(
+        column=intermediate_vars,
+    )
+    facetted_histograms_json = facetted_histograms.to_json()
+
     wave_energy_geo = geopandas.read_file(file_registry['wave_energies'])
     wave_energy_geo = wave_energy_geo.join(
         intermediate_df[['shore_id', 'wave']].set_index('shore_id'), on='shore_id')
@@ -275,7 +367,11 @@ def report(logfile_path):
             args_dict=args_dict,
             exposure_map_json=exposure_map_json,
             habitat_map_json=habitat_map_json,
+            habitat_params_table=habitat_params_df.to_html(),
+            habitat_table_description=habitat_table_description,
             exposure_histogram_json=exposure_histogram_json,
+            facetted_histograms_json=facetted_histograms_json,
+            rank_vars_figure_json=rank_vars_figure_json,
             wave_energy_map_json=wave_energy_map_json,
             accordions_open_on_load=True,
             accent_color='lemonchiffon'
@@ -283,6 +379,6 @@ def report(logfile_path):
 
 
 if __name__ == '__main__':
-    # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
-    logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-01--15_17_00.txt'
+    logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
+    # logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
     report(logfile_path)
