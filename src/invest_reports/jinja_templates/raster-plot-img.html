@@ -1,0 +1,6 @@
+{% macro raster_plot_img(img_src) -%}
+  <img
+    src="data:image/png;base64,{{ img_src }}"
+    alt="Raster plots: {{ section_heading }}"
+  />
+{%- endmacro %}
