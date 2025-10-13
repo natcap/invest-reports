@@ -1,0 +1,7 @@
+{% macro content_grid(contents) -%}
+  {% for (item, width) in contents %}
+    <div class="accordion-content-item" style="width: {{ width }}%">
+      {{ item }}
+    </div>
+  {% endfor %}
+{%- endmacro %}
