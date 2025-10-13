@@ -98,55 +98,6 @@ def chart_base_points(geodataframe):
     return base_points
 
 
-def chart_map_hist(geodataframe, cols, basemap):
-    variable_select = altair.binding_selection(name='select variable')
-    scale_population = altair.param(value='', bind=variable_select)
-
-    repeated_points = altair.Chart(
-        geodataframe.dropna(subset=['exposure'])
-    ).transform_calculate(
-        lon="datum.geometry.coordinates[0]",
-        lat="datum.geometry.coordinates[1]",
-    ).transform_fold(cols).project(
-        type='identity',
-        reflectY=True  # Canvas and SVG treats positive y as down
-    ).mark_circle().encode(
-        longitude='lon:Q',
-        latitude='lat:Q',
-        color=altair.Color(
-            'value:Q',
-            legend=altair.Legend(title='rank')
-        ).scale(scheme='plasma', reverse=True).bin(extent=[1, 5], step=1),
-    )
-    return repeated_points.facet(
-        facet=altair.Facet('key:Q', title=None, header=altair.Header(labelFontSize=0)),
-        columns=3
-    )
-
-
-def chart_repeat_points(geodataframe, cols, basemap):
-    repeated_points = altair.Chart(
-        geodataframe.dropna(subset=['exposure'])
-    ).transform_calculate(
-        lon="datum.geometry.coordinates[0]",
-        lat="datum.geometry.coordinates[1]",
-    ).transform_fold(cols).project(
-        type='identity',
-        reflectY=True  # Canvas and SVG treats positive y as down
-    ).mark_circle().encode(
-        longitude='lon:Q',
-        latitude='lat:Q',
-        color=altair.Color(
-            'value:Q',
-            legend=altair.Legend(title='rank')
-        ).scale(scheme='plasma', reverse=True).bin(extent=[1, 5], step=1),
-    )
-    return repeated_points.facet(
-        facet=altair.Facet('key:Q', title=None), # , header=altair.Header(labelFontSize=0)),
-        columns=3
-    )
-
-
 def chart_wave_energy(wave_energy_geo):
     base_points = chart_base_points(wave_energy_geo)
 
