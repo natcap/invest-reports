@@ -14,7 +14,7 @@ env = Environment(
     loader=PackageLoader('invest_reports', 'jinja_templates'),
     autoescape=select_autoescape()
 )
-template = env.get_template('report.html')
+template = env.get_template('sdr-ndr-report.html')
 
 # Define basic info.
 model_name = 'NDR'
@@ -26,7 +26,9 @@ logfile_path = '/Users/eadavis/invest-workbench/invest-workspaces/ndr/InVEST-ndr
 _, ds_info = datastack.get_datastack_info(logfile_path)
 args_dict = ds_info.args
 workspace = args_dict['workspace_dir']
-suffix_str = natcap.invest.utils.make_suffix_string(args_dict, 'results_suffix')
+# suffix_str = natcap.invest.utils.make_suffix_string(args_dict, 'results_suffix')
+# `make_suffix_string` no longer exists; hard-code to '_gura' for now.
+suffix_str = '_gura'
 
 # Plot inputs.
 inputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters([
