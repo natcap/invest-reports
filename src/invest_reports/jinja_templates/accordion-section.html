@@ -1,0 +1,28 @@
+<!--
+  Import this macro `with context` to allow it to access
+ `accordions_open_on_load` directly from the args to `template.render()`.
+-->
+
+{% macro accordion_section(section_heading, content) -%}
+  {% set accordion_panel_id = ['accordion-panel-', globals.accordion_panel_num]|join %}
+  {% set globals.accordion_panel_num = globals.accordion_panel_num + 1 %}
+  <section
+    class="accordion-section {{ 'open' if accordions_open_on_load else '' }}"
+  >
+    <h3 class="accordion-header">
+      <button
+        class="accordion-button"
+        aria-expanded="{{ 'true' if accordions_open_on_load else 'false' }}"
+        aria-controls="{{ accordion_panel_id }}"
+      >
+        {{ section_heading }}
+      </button>
+    </h3>
+    <div
+      class="accordion-content"
+      id="{{ accordion_panel_id }}"
+    >
+      {{ content }}
+    </div>
+  </section>
+{%- endmacro %}

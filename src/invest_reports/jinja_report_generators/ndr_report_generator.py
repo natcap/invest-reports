@@ -14,19 +14,21 @@ env = Environment(
     loader=PackageLoader('invest_reports', 'jinja_templates'),
     autoescape=select_autoescape()
 )
-template = env.get_template('report.html')
+template = env.get_template('sdr-ndr-report.html')
 
 # Define basic info.
 model_name = 'NDR'
 timestamp = time.strftime('%Y-%m-%d %H:%M')
-# @TODO: get logfile path programmatically
+# @TODO: use file registry JSON instead
 logfile_path = '/Users/eadavis/invest-workbench/invest-workspaces/ndr/InVEST-ndr-log-2025-08-22--17_26_24.txt'
 
 # Get args dict, workspace path, and suffix string.
 _, ds_info = datastack.get_datastack_info(logfile_path)
 args_dict = ds_info.args
 workspace = args_dict['workspace_dir']
-suffix_str = natcap.invest.utils.make_suffix_string(args_dict, 'results_suffix')
+# suffix_str = natcap.invest.utils.make_suffix_string(args_dict, 'results_suffix')
+# `make_suffix_string` no longer exists; hard-code to '_gura' for now.
+suffix_str = '_gura'
 
 # Plot inputs.
 inputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters([
@@ -73,7 +75,6 @@ stream_network_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
 with open(os.path.join(workspace, f'{model_name.lower()}{suffix_str}.html'),
           'w') as target_file:
     target_file.write(template.render(
-        page_title=f'InVEST Results: {model_name}',
         model_name=model_name,
         timestamp=timestamp,
         args_dict=args_dict,
