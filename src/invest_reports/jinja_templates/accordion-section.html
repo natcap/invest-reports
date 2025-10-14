@@ -1,3 +1,8 @@
+<!--
+  Import this macro `with context` to allow it to access
+ `accordions_open_on_load` directly from the args to `template.render()`.
+-->
+
 {% macro accordion_section(section_heading, content) -%}
   {% set accordion_panel_id = ['accordion-panel-', globals.accordion_panel_num]|join %}
   {% set globals.accordion_panel_num = globals.accordion_panel_num + 1 %}

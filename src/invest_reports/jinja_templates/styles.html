@@ -1,18 +1,23 @@
 <style>
+  :root {
+    --invest-green: #148f68;
+    --accent-color: {{ accent_color }};
+  }
+  * {
+    box-sizing: border-box;
+  }
   body {
-      --invest-green: #148f68;
-      --accent-color: {{ accent_color }};
-      background: linear-gradient(
-        to bottom right,
-        var(--invest-green),
-        var(--accent-color),
-        var(--invest-green)
-      );
-      color: #000000;
-      font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
-      margin: 0;
-      min-height: calc(100vh - 2rem);
-    }
+    background: linear-gradient(
+      to bottom right,
+      var(--invest-green),
+      var(--accent-color),
+      var(--invest-green)
+    );
+    color: #000000;
+    font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+    margin: 0;
+    min-height: calc(100vh - 2rem);
+  }
   .report-container {
     background: #fff;
     border-radius: 1rem;
@@ -65,10 +70,19 @@
         }
       }
       .accordion-content {
-        display: flex;
-        flex-wrap: wrap;
-        padding: 1rem
+        display: block;
+        padding: 1rem;
+        &:has(.content-grid) {
+          padding: 0.5rem;
+        }
       }
+    }
+  }
+  .content-grid {
+    display: flex;
+    flex-wrap: wrap;
+    .content-grid-item {
+      padding: 0.5rem;
     }
   }
   h1, h2, h3, th {
