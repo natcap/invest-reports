@@ -112,6 +112,56 @@ def chart_wave_energy(wave_energy_geo):
     return points
 
 
+def chart_habitat_map(habitat_protection_csv, exposure_geo, landmass):
+    habitat_df = pandas.read_csv(habitat_protection_csv)
+    habitat_geo = exposure_geo[['shore_id', 'geometry', 'habitat_role']].join(
+        habitat_df.set_index('shore_id'), on='shore_id')
+    habitats = set(habitat_df.columns).difference(set(['shore_id', 'R_hab']))
+
+    def concat_habitats(row):
+        hab_list = []
+        for h in habitats:
+            if row[h] != 5:
+                hab_list.append(h)
+        return ','.join(hab_list)
+    habitat_geo['hab_presence'] = habitat_geo.apply(concat_habitats, axis=1)
+
+    habitat_radio = altair.binding_radio(
+        options=['All'] + list(habitats),
+        labels=['All'] + list(habitats),
+        name='Show points protected by each habitat:'
+    )
+    hab_param = altair.param(value='All', bind=habitat_radio)
+
+    # TODO: can all maps reference the same json point dataset to save space?
+    # Charts that are concatenated into the same specification will. Charts spread
+    # across specs will not. Perhaps charts spread across specs could, but it
+    # probably requires ditching altair and constructing the vegalite specs another way.
+    habitat_base_points = chart_base_points(habitat_geo)
+
+    habitat_points = habitat_base_points.add_params(
+        hab_param
+    ).transform_filter(
+        (hab_param == 'All') |
+        altair.expr.test(hab_param, altair.datum.hab_presence)
+    ).mark_circle(
+        filled=point_fill,
+        strokeWidth=stroke_width,
+        size=point_size
+    ).encode(
+        color=altair.Color('habitat_role:Q').scale(scheme='viridis', reverse=True),
+        tooltip=altair.Tooltip(list(habitats), format='.2f')
+    )
+
+    habitat_map = landmass + habitat_points
+    habitat_map = habitat_map.properties(
+        width=map_width,
+        height=map_width / xy_ratio,
+        title='The role of habitat in reducing coastal exposure'
+    ).configure_legend(**legend_config)
+    return habitat_map
+
+
 def report(logfile_path):
     _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
     args_dict = ds_info.args
@@ -125,8 +175,15 @@ def report(logfile_path):
         file_registry = json.loads(file.read())
 
     rank_vars = ['R_hab', 'R_wind', 'R_wave', 'R_surge', 'R_relief']
-    tooltip_vars = ['exposure'] + rank_vars
     exposure_geo = geopandas.read_file(file_registry['coastal_exposure'])
+    landmass_geo = geopandas.read_file(
+        file_registry['clipped_projected_landmass'])
+    extent_feature, xy_ratio = get_geojson_bbox(exposure_geo)
+    landmass = chart_landmass(
+        landmass_geo, clip=True, extent_feature=extent_feature)
+    base_points = chart_base_points(exposure_geo)
+    
+    tooltip_vars = ['exposure'] + rank_vars
     if 'R_geomorph' in exposure_geo:
         rank_vars.append('R_geomorph')
     scale_population = altair.param(value=False)
@@ -139,12 +196,6 @@ def report(logfile_path):
         population_checkbox = altair.binding_checkbox(name='scale by population')
         scale_population = altair.param(value=True, bind=population_checkbox)
 
-    landmass_geo = geopandas.read_file(
-        file_registry['clipped_projected_landmass'])
-    extent_feature, xy_ratio = get_geojson_bbox(exposure_geo)
-    landmass = chart_landmass(
-        landmass_geo, clip=True, extent_feature=extent_feature)
-    base_points = chart_base_points(exposure_geo)
 
     tooltip = altair.Tooltip(tooltip_vars, format='.2f')
     null_checkbox = altair.binding_checkbox(name='show null')
@@ -191,53 +242,12 @@ def report(logfile_path):
     ).configure_legend(**legend_config)
     exposure_map_json = exposure_map.to_json()
 
-    habitat_df = pandas.read_csv(file_registry['habitat_protection'])
-    habitat_geo = exposure_geo[['shore_id', 'geometry', 'habitat_role']].join(
-        habitat_df.set_index('shore_id'), on='shore_id')
-    habitats = set(habitat_df.columns).difference(set(['shore_id', 'R_hab']))
-
-    def concat_habitats(row):
-        hab_list = []
-        for h in habitats:
-            if row[h] != 5:
-                hab_list.append(h)
-        return ','.join(hab_list)
-    habitat_geo['hab_presence'] = habitat_geo.apply(concat_habitats, axis=1)
-
-    habitat_radio = altair.binding_radio(
-        options=['All'] + list(habitats),
-        labels=['All'] + list(habitats),
-        name='Show points protected by each habitat:'
-    )
-    hab_param = altair.param(value='All', bind=habitat_radio)
-
-    # TODO: can all maps reference the same json point dataset to save space?
-    # Charts that are concatenated into the same specification will. Charts spread
-    # across specs will not. Perhaps charts spread across specs could, but it
-    # probably requires ditching altair and constructing the vegalite specs another way.
-    habitat_base_points = chart_base_points(habitat_geo)
-
-    habitat_points = habitat_base_points.add_params(
-        hab_param
-    ).transform_filter(
-        (hab_param == 'All') |
-        altair.expr.test(hab_param, altair.datum.hab_presence)
-    ).mark_circle(
-        filled=point_fill,
-        strokeWidth=stroke_width,
-        size=point_size
-    ).encode(
-        color=altair.Color('habitat_role:Q').scale(scheme='viridis', reverse=True),
-        tooltip=altair.Tooltip(list(habitats), format='.2f')
-    )
-
-    habitat_map = landmass + habitat_points
-    habitat_map = habitat_map.properties(
-        width=map_width,
-        height=map_width / xy_ratio,
-        title='The role of habitat in reducing coastal exposure'
-    ).configure_legend(**legend_config)
+    habitat_map = chart_habitat_map(
+        file_registry['habitat_protection'],
+        exposure_geo,
+        landmass)
     habitat_map_json = habitat_map.to_json()
+
     habitat_params_df = pandas.read_csv(args_dict['habitat_table_path'])
     habitat_table_description = f'Rank = {MODEL_SPEC.get_input(
         'habitat_table_path').get_column('rank').about}'
