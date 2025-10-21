@@ -22,11 +22,12 @@ MATPLOTLIB_PARAMS = {
 plt.rcParams.update(MATPLOTLIB_PARAMS)
 
 # We set report container max width to 80rem.
-# Figures should fill as much of that as possible.
+# img is set to width:100%, but it's best if figures are sized to
+# fill the container with minimal rescaling, as they contain rasterized text.
 # Other variables:
 #   root font size (default 16px)
-#   savefig with tight bbox layout
-FIGURE_WIDTH = 12  # inches
+#   savefig with tight bbox layout shrinks the figure after it is sized
+FIGURE_WIDTH = 14.5  # inches; by trial & error
 
 
 class RasterPlotConfig:
