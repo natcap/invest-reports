@@ -20,7 +20,8 @@ template = env.get_template('sdr-ndr-report.html')
 model_name = 'NDR'
 timestamp = time.strftime('%Y-%m-%d %H:%M')
 # @TODO: use file registry JSON instead
-logfile_path = '/Users/eadavis/invest-workbench/invest-workspaces/ndr/InVEST-ndr-log-2025-08-22--17_26_24.txt'
+# logfile_path = '/Users/eadavis/invest-workbench/invest-workspaces/ndr/InVEST-ndr-log-2025-08-22--17_26_24.txt'
+logfile_path = 'C:/Users/dmf/projects/forum/autotest3/autorun_ndr_0/InVEST-ndr-log-2025-10-08--17_11_45.txt'
 
 # Get args dict, workspace path, and suffix string.
 _, ds_info = datastack.get_datastack_info(logfile_path)
@@ -73,7 +74,7 @@ stream_network_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
 
 # Generate HTML document.
 with open(os.path.join(workspace, f'{model_name.lower()}{suffix_str}.html'),
-          'w') as target_file:
+          'w', encoding='utf-8') as target_file:
     target_file.write(template.render(
         model_name=model_name,
         timestamp=timestamp,
