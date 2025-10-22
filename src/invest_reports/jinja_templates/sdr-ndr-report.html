@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+  {{ super() }}
+
+  {% from 'args-table.html' import args_table with context %}
+  {% from 'raster-plot-img.html' import raster_plot_img %}
+
+  <h2>Inputs</h2>
+
+  {{ accordion_section(
+    'Arguments',
+    args_table(),
+  )}}
+
+  {{ accordion_section(
+    'Geospatial Inputs',
+    raster_plot_img(inputs_img_src, 'Geospatial Inputs'),
+  )}}
+
+  <h2>Outputs</h2>
+
+  {{ accordion_section(
+    'Primary Outputs',
+    raster_plot_img(outputs_img_src, 'Primary Outputs'),
+  )}}
+
+  {{ accordion_section(
+    intermediate_outputs_heading,
+    raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading),
+  )}}
+
+{% endblock content %}

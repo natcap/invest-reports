@@ -21,7 +21,13 @@ MATPLOTLIB_PARAMS = {
     }
 plt.rcParams.update(MATPLOTLIB_PARAMS)
 
-FIGURE_WIDTH = 12
+# We set report container max width to 80rem.
+# img is set to width:100%, but it's best if figures are sized to
+# fill the container with minimal rescaling, as they contain rasterized text.
+# Other variables:
+#   root font size (default 16px)
+#   savefig with tight bbox layout shrinks the figure after it is sized
+FIGURE_WIDTH = 14.5  # inches; by trial & error
 
 
 class RasterPlotConfig:
@@ -94,7 +100,7 @@ def _figure_subplots(map_bbox, n_plots):
     n_rows, n_cols, xy_ratio = _choose_n_rows_n_cols(map_bbox, n_plots)
 
     sub_width = FIGURE_WIDTH / n_cols
-    sub_height = sub_width / xy_ratio
+    sub_height = (sub_width / xy_ratio) + 0.5  # in; expand vertically for title
     return plt.subplots(
         n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height))
 
@@ -156,9 +162,23 @@ def base64_encode(figure):
         A string representing the figure as a base64-encoded PNG.
     """
     figfile = BytesIO()
-    figure.savefig(figfile, format='png')
+    figure.savefig(figfile, format='png', bbox_inches='tight')
     figfile.seek(0)  # rewind to beginning of file
     return base64.b64encode(figfile.getvalue()).decode('utf-8')
+
+
+def base64_encode_file(filepath):
+    """Encode a binary file as a base64 string.
+
+    Args:
+        filepath (str): the file to encode.
+
+    Returns:
+        A string representing the file as a base64-encoded string.
+    """
+    with open(filepath, 'rb') as file:
+        s = base64.b64encode(file.read()).decode('utf-8')
+    return s
 
 
 def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
@@ -194,6 +214,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     When all the rasters have the same shape and represent the same variable,
     it's useful to scale the colorbar to the global min/max values across
     all rasters, so that the colors are visually comparable across the maps.
+    All rasters share a datatype and a transform.
 
     Args:
         tif_list (list): list of filepaths to rasters
@@ -206,15 +227,18 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
     bbox = raster_info['bounding_box']
     n_plots = len(tif_list)
-    shape = raster_info['overviews'][-1]
-
     fig, axes = _figure_subplots(bbox, n_plots)
 
     cmap_str = COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
-    ndarray = numpy.empty((n_plots, shape[1], shape[0]))
+    arr, resampled = read_masked_array(tif_list[0], RESAMPLE_ALGS[datatype])
+    ndarray = numpy.empty((n_plots, *arr.shape))
+    ndarray[0] = arr
     for i, tif in enumerate(tif_list):
+        # We already got the first one to initialize the ndarray with correct shape
+        if i == 0:
+            continue
         arr, resampled = read_masked_array(tif, RESAMPLE_ALGS[datatype])
         ndarray[i] = arr
     # Perhaps this could be optimized by reading min/max from tif metadata

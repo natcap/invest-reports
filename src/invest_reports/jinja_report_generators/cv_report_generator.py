@@ -153,6 +153,7 @@ def chart_habitat_map(habitat_protection_csv, exposure_geo, landmass):
         tooltip=altair.Tooltip(list(habitats), format='.2f')
     )
 
+    _, xy_ratio = get_geojson_bbox(exposure_geo)
     habitat_map = landmass + habitat_points
     habitat_map = habitat_map.properties(
         width=map_width,
@@ -195,7 +196,6 @@ def report(logfile_path):
         tooltip_vars.append('population')
         population_checkbox = altair.binding_checkbox(name='scale by population')
         scale_population = altair.param(value=True, bind=population_checkbox)
-
 
     tooltip = altair.Tooltip(tooltip_vars, format='.2f')
     null_checkbox = altair.binding_checkbox(name='show null')
@@ -340,6 +340,6 @@ def report(logfile_path):
 
 
 if __name__ == '__main__':
-    logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
-    # logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
+    # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
+    logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
     report(logfile_path)
