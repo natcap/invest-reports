@@ -1,0 +1,71 @@
+<!--
+  
+-->
+{% macro datatable(html_table, table_id) -%}
+  <div id="variable-select-container">
+      <label for="variable-select">Filter by variable: </label>
+  </div>
+  <div>
+      {{html_table | safe}}
+  </div>
+  <script type="text/javascript">
+    window.addEventListener('DOMContentLoaded', function () {
+      new DataTable('#{{ table_id }}', {
+        paging: false,
+        layout: {
+          topStart: null,
+          topEnd: null,
+          bottomStart: {
+            buttons: ['colvis']
+          },
+          bottomEnd: null
+        },
+        autoWidth: false,
+        columnDefs: [
+          {
+            targets: '_all',
+            render: function (data, type, row, meta) {
+              const number = parseFloat(data);
+              let string = data
+              if (!isNaN(number)) {
+                  string = number.toLocaleString(
+                      undefined,
+                      {
+                          minimumFractionDigits: 0,
+                          maximumFractionDigits: 2
+                      });
+              }
+              return string;
+            }
+          }
+        ],
+        initComplete: function () {
+          this.api()
+            .columns('variable:title')
+            .every(function () {
+              let column = this;
+
+              let select = document.createElement('select');
+              select.setAttribute('id', 'variable-select');
+              select.add(new Option(''));
+              document.getElementById('variable-select-container').append(select);
+
+              select.addEventListener('change', function () {
+                column
+                  .search(select.value, {exact: true})
+                  .draw();
+              });
+
+              column
+                .data()
+                .unique()
+                .sort()
+                .each(function (d, j) {
+                  select.add(new Option(d));
+                });
+            });
+          }
+      });
+    });
+  </script>
+{%- endmacro %}
