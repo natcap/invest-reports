@@ -20,8 +20,7 @@ template = env.get_template('sdr-ndr-report.html')
 model_name = 'NDR'
 timestamp = time.strftime('%Y-%m-%d %H:%M')
 # @TODO: use file registry JSON instead
-# logfile_path = '/Users/eadavis/invest-workbench/invest-workspaces/ndr/InVEST-ndr-log-2025-08-22--17_26_24.txt'
-logfile_path = 'C:/Users/dmf/projects/forum/autotest3/autorun_ndr_0/InVEST-ndr-log-2025-10-08--17_11_45.txt'
+logfile_path = '/Users/eadavis/invest-workbench/invest-workspaces/ndr/InVEST-ndr-log-2025-08-22--17_26_24.txt'
 
 # Get args dict, workspace path, and suffix string.
 _, ds_info = datastack.get_datastack_info(logfile_path)

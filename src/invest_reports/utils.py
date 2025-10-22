@@ -149,7 +149,6 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
         ax.set(title=f"{os.path.basename(tif)}{'*' if resampled else ''}")
         fig.colorbar(mappable, ax=ax)
     [ax.set_axis_off() for ax in axes.flatten()]
-    # fig.tight_layout()
     return fig
 
 
