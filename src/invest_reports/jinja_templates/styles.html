@@ -39,6 +39,7 @@
       text-align: left;
       align-items: baseline;
       width: 100%;
+      transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out;
       &:focus-visible {
         outline: 0.25rem dotted var(--invest-green);
         outline-offset: -0.75rem;
@@ -59,7 +60,7 @@
     &.open {
       border: 0.25rem solid var(--invest-green);
       .accordion-button {
-        border-color: transparent;
+        border-width: 0;
         border-radius: 0.75rem 0.75rem 0 0;
         &:focus-visible {
           outline-offset: -0.5rem;
