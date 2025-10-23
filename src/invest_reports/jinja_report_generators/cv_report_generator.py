@@ -10,7 +10,6 @@ import natcap.invest.utils
 import natcap.invest.datastack
 from natcap.invest.coastal_vulnerability import MODEL_SPEC
 
-import invest_reports.utils
 from invest_reports.utils import RasterPlotConfig
 
 # perform transformations before embedding
@@ -163,16 +162,20 @@ def chart_habitat_map(habitat_protection_csv, exposure_geo, landmass):
     return habitat_map
 
 
-def report(logfile_path):
+def report(logfile_path, model_spec):
+    # TODO: depending on how these reports are integrated with invest model
+    # execution, it may be prefereable to pass an args_dict and file_registry
+    # directly to the report function.
     _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
-    args_dict = ds_info.args
+    args_dict = model_spec.preprocess_inputs(ds_info.args)
     workspace = args_dict['workspace_dir']
-    suffix_str = natcap.invest.utils.make_suffix_string(args_dict, 'results_suffix')
+    file_registry_path = os.path.join(
+        workspace, f'file_registry{args_dict['results_suffix']}.json')
     images_dir = os.path.join(workspace, '_images')
     if not os.path.exists(images_dir):
         os.mkdir(images_dir)
 
-    with open(os.path.join(workspace, 'file_registry.json'), 'r') as file:
+    with open(file_registry_path, 'r') as file:
         file_registry = json.loads(file.read())
 
     rank_vars = ['R_hab', 'R_wind', 'R_wave', 'R_surge', 'R_relief']
@@ -249,7 +252,7 @@ def report(logfile_path):
     habitat_map_json = habitat_map.to_json()
 
     habitat_params_df = pandas.read_csv(args_dict['habitat_table_path'])
-    habitat_table_description = f'Rank = {MODEL_SPEC.get_input(
+    habitat_table_description = f'Rank = {model_spec.get_input(
         'habitat_table_path').get_column('rank').about}'
 
     exposure_histogram = altair.Chart(exposure_geo).mark_bar().encode(
@@ -319,8 +322,9 @@ def report(logfile_path):
     # ])
 
     # Generate HTML document.
-    with open(os.path.join(workspace, f'{model_name.lower()}{suffix_str}.html'),
-              'w', encoding='utf-8') as target_file:
+    report_filename = os.path.join(
+        workspace, f'{model_name.lower()}{args_dict['results_suffix']}.html')
+    with open(report_filename, 'w', encoding='utf-8') as target_file:
         target_file.write(template.render(
             page_title=f'InVEST Results: {model_name}',
             model_name=model_name,
@@ -335,11 +339,10 @@ def report(logfile_path):
             rank_vars_figure_json=rank_vars_figure_json,
             wave_energy_map_json=wave_energy_map_json,
             accordions_open_on_load=True,
-            accent_color='lemonchiffon'
         ))
 
 
 if __name__ == '__main__':
     # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
     logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
-    report(logfile_path)
+    report(logfile_path, MODEL_SPEC)
