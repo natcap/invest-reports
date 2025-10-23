@@ -1,3 +1,4 @@
+{% set accent_color = accent_color if accent_color else 'ghostwhite' %}
 <style>
   :root {
     --invest-green: #148f68;
@@ -7,12 +8,6 @@
     box-sizing: border-box;
   }
   body {
-    background: linear-gradient(
-      to bottom right,
-      var(--invest-green),
-      var(--accent-color),
-      var(--invest-green)
-    );
     color: #000000;
     font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
     margin: 0;
@@ -40,12 +35,18 @@
       font-family: inherit;
       font-size: inherit;
       font-weight: inherit;
-      padding: 2.25rem 1rem;
+      padding: 1.5rem 1rem;
       text-align: left;
+      align-items: baseline;
       width: 100%;
+      transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out;
       &:focus-visible {
         outline: 0.25rem dotted var(--invest-green);
         outline-offset: -0.75rem;
+      }
+      &:hover {
+        background: var(--invest-green);
+        color: white;
       }
       &::before {
         content: '⏷';
@@ -59,9 +60,8 @@
     &.open {
       border: 0.25rem solid var(--invest-green);
       .accordion-button {
-        border-color: transparent;
+        border-width: 0;
         border-radius: 0.75rem 0.75rem 0 0;
-        padding: 2rem 0.75rem;
         &:focus-visible {
           outline-offset: -0.5rem;
         }
@@ -97,6 +97,9 @@
   h3 {
     font-size: 1.25rem;
   }
+  .section-header {
+    margin-top: 3.0rem;
+  }
   table {
       border: 0.25rem solid var(--invest-green);
       border-collapse: collapse;
@@ -121,5 +124,13 @@
   }
   img {
     width: 100%;
+  }
+  dt {
+    font-weight: bold;
+    margin-top: 1rem;
+  }
+  dd {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
   }
 </style>

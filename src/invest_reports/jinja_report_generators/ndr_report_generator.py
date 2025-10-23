@@ -73,7 +73,7 @@ stream_network_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
 
 # Generate HTML document.
 with open(os.path.join(workspace, f'{model_name.lower()}{suffix_str}.html'),
-          'w') as target_file:
+          'w', encoding='utf-8') as target_file:
     target_file.write(template.render(
         model_name=model_name,
         timestamp=timestamp,
