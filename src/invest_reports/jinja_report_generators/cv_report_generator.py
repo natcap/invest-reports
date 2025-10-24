@@ -280,7 +280,10 @@ def report(logfile_path, model_spec):
     rank_vars_spec_list = []
     for var in rank_vars:
         point_spec = base_rank_vars_spec.encode(
-            color=altair.Color(f'{var}:Q').scale(scheme='plasma', reverse=True),
+            color=altair.Color(
+                f'{var}:Q',
+                legend=altair.Legend(title='rank')
+            ).scale(scheme='plasma', reverse=True),
         )
         rank_vars_spec_list.append(
             altair.layer(landmass, point_spec).properties(
@@ -301,6 +304,8 @@ def report(logfile_path, model_spec):
             type='quantitative',
             bin=altair.Bin(nice=True)),
         y='count()'
+    ).properties(
+        width=map_width // 2
     ).repeat(
         column=intermediate_vars,
     )
