@@ -1,5 +1,7 @@
 import json
+import logging
 import os
+import sys
 import time
 
 import altair
@@ -11,6 +13,8 @@ import natcap.invest.datastack
 from natcap.invest.coastal_vulnerability import MODEL_SPEC
 
 from invest_reports.utils import RasterPlotConfig
+
+LOGGER = logging.getLogger(__name__)
 
 # perform transformations before embedding
 # data in the chart's spec in order to conserve space
@@ -340,9 +344,12 @@ def report(logfile_path, model_spec):
             wave_energy_map_json=wave_energy_map_json,
             accordions_open_on_load=True,
         ))
+    LOGGER.info(f'Created {report_filename}')
 
 
 if __name__ == '__main__':
+    handler = logging.StreamHandler(sys.stdout)
+    logging.basicConfig(level=logging.INFO, handlers=[handler])
     # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
     logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
     report(logfile_path, MODEL_SPEC)
