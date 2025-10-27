@@ -5,6 +5,7 @@ import sys
 import time
 
 import altair
+import geometamaker
 import geopandas
 import pandas
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -101,15 +102,20 @@ def chart_base_points(geodataframe):
     return base_points
 
 
-def chart_wave_energy(wave_energy_geo):
+def chart_wave_energy(wave_energy_geo, energy_units):
     base_points = chart_base_points(wave_energy_geo)
 
     points = base_points.mark_circle(
         filled=point_fill,
         strokeWidth=stroke_width,
     ).encode(
-        color='max_E_type:N',
-        size='wave:Q'
+        color=altair.Color(
+            'max_E_type:N',
+            legend=altair.Legend(title='dominant wave type')
+        ),
+        size=altair.Size(
+            'wave:Q',
+            legend=altair.Legend(title=f'wave energy\n ({energy_units})'))
     )
 
     return points
@@ -312,14 +318,21 @@ def report(logfile_path, model_spec):
     facetted_histograms_json = facetted_histograms.to_json()
 
     wave_energy_geo = geopandas.read_file(file_registry['wave_energies'])
+    # https://github.com/natcap/invest/issues/2216
+    # energy_units = natcap.invest.spec.format_unit(
+    #     model_spec.get_output('wave_energies').get_field('E_ocean').units)
+    # https://github.com/natcap/invest/issues/2217
+    # energy_units = geometamaker.describe(
+    #     file_registry['wave_energies']).get_field_description('E_ocean').units
+    energy_units = 'kW/meter'
     wave_energy_geo = wave_energy_geo.join(
         intermediate_df[['shore_id', 'wave']].set_index('shore_id'), on='shore_id')
-    wave_points = chart_wave_energy(wave_energy_geo)
+    wave_points = chart_wave_energy(wave_energy_geo, energy_units)
     wave_energy_map = landmass + wave_points
     wave_energy_map = wave_energy_map.properties(
-        width=map_width,
+        width=map_width + 30,  # extra space for legend
         height=map_width / xy_ratio,
-        title='Exposure to wind-driven waves vs. open ocean waves'
+        title='local wind-driven waves vs. open ocean waves'
     ).configure_legend(**legend_config)
     wave_energy_map_json = wave_energy_map.to_json()
 
@@ -330,14 +343,25 @@ def report(logfile_path, model_spec):
     #     RasterPlotConfig(args_dict['lulc_path'], 'nominal')
     # ])
 
+    model_description = \
+        """
+        The Coastal Vulnerability model calculates a coastal exposure index,
+        which represents the relative exposure of different coastline segments
+        to erosion and inundation caused by storms within the region of interest.
+        The index values range from 1 (least exposed) to 5 (most exposed) and
+        are calculated as the geometric mean of up to seven bio-geophysical
+        variables.
+        """
     # Generate HTML document.
     report_filename = os.path.join(
         workspace, f'{model_name.lower()}{args_dict['results_suffix']}.html')
     with open(report_filename, 'w', encoding='utf-8') as target_file:
         target_file.write(template.render(
+            report_script=__file__,
+            timestamp=timestamp,
             page_title=f'InVEST Results: {model_name}',
             model_name=model_name,
-            timestamp=timestamp,
+            model_description=model_description,  # later this may in model_spec
             args_dict=args_dict,
             exposure_map_json=exposure_map_json,
             habitat_map_json=habitat_map_json,
