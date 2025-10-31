@@ -3,7 +3,7 @@
     function showError(el, error) {
       el.innerHTML = ('<div style="color:red;">'
                       + '<p>JavaScript Error: ' + error.message + '</p>'
-                      + "<p>This usually means there's a typo in your chart specification. "
+                      + "<p>This usually means there's a error in your chart specification. "
                       + "See the javascript console for the full traceback.</p>"
                       + '</div>');
       throw error;
@@ -16,8 +16,6 @@
     })
       .then(function (result) {
         // Access the Vega view instance (https://vega.github.io/vega/docs/api/view/) as result.view
-        // console.log(result.view.padding())
-        // result.view.padding({"left": 0, "right": 0, "bottom": 0, "top": 0})
       })
       .catch(error => showError(el, error));
   }
