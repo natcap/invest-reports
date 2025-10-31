@@ -1,8 +1,17 @@
-{% set accent_color = accent_color if accent_color else 'ghostwhite' %}
+{% set accent_color_suffix = model_id if model_id else 'default' %}
 <style>
   :root {
     --invest-green: #148f68;
-    --accent-color: {{ accent_color }};
+    --accent-color-default: #f0f0f0;
+
+    /* Model-specific accent colors should be added here as needed.
+       Helpful random color generator: https://rgbcolorpicker.com/random/pastel */
+    /* Make sure each accent color has sufficient contrast with black (#000).
+       Minimum 4.5:1; higher is better. Check with https://www.whocanuse.com/. */
+    --accent-color-ndr: #c2da9d;
+    --accent-color-sdr: #e4b5db;
+
+    --accent-color: var(--accent-color-{{ accent_color_suffix }});
   }
   * {
     box-sizing: border-box;
@@ -24,6 +33,9 @@
     border-radius: 1rem;
     margin-bottom: 1rem;
     padding: 0;
+    &:last-child {
+      margin-bottom: 0;
+    }
     .accordion-header {
       margin: 0;
     }
@@ -41,7 +53,7 @@
       width: 100%;
       transition: background-color 0.1s ease-in-out, color 0.1s ease-in-out;
       &:focus-visible {
-        outline: 0.25rem dotted var(--invest-green);
+        outline: 0.25rem dotted #000000;
         outline-offset: -0.75rem;
       }
       &:hover {
@@ -83,6 +95,12 @@
     flex-wrap: wrap;
     .content-grid-item {
       padding: 0.5rem;
+    }
+  }
+  .wide-table-wrapper {
+    overflow-x: auto;
+    table > tbody {
+      word-break: break-word;
     }
   }
   h1, h2, h3, th {

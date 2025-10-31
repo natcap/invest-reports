@@ -5,21 +5,19 @@
   {{ super() }}
 
   {% from 'args-table.html' import args_table with context %}
+  {% from 'metadata.html' import list_metadata %}
   {% from 'raster-plot-img.html' import raster_plot_img %}
+  {% from 'wide-table.html' import wide_table %}
 
-  <h2>Inputs</h2>
-
-  {{ accordion_section(
-    'Arguments',
-    args_table(),
-  )}}
+  <h2 class="section-header">Results</h2>
 
   {{ accordion_section(
-    'Geospatial Inputs',
-    raster_plot_img(inputs_img_src, 'Geospatial Inputs'),
+    'Results by Watershed',
+    wide_table(
+      ws_vector_table | safe,
+      font_size_px=15
+    ),
   )}}
-
-  <h2>Outputs</h2>
 
   {{ accordion_section(
     'Primary Outputs',
@@ -30,5 +28,37 @@
     intermediate_outputs_heading,
     raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading),
   )}}
+
+  {{ accordion_section(
+    'Output Raster Stats',
+    output_raster_stats_table | safe,
+  )}}
+
+  <h2 class="section-header">Inputs</h2>
+
+  {{ accordion_section(
+    'Arguments',
+    args_table(),
+  )}}
+
+  {{ accordion_section(
+    'Raster Inputs',
+    raster_plot_img(inputs_img_src, 'Raster Inputs'),
+  )}}
+
+  {{ accordion_section(
+    'Input Raster Stats',
+    input_raster_stats_table | safe,
+  )}}
+
+  <h2 class="section-header">Metadata</h2>
+
+  {{
+    accordion_section(
+      'Output Filenames and Descriptions',
+      list_metadata(model_spec_outputs)
+    )
+  }}
+
 
 {% endblock content %}

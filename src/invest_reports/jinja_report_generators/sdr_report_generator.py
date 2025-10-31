@@ -5,7 +5,7 @@ import geopandas
 from jinja2 import Environment, PackageLoader, select_autoescape
 
 from natcap.invest import datastack
-from natcap.invest.ndr.ndr import MODEL_SPEC
+from natcap.invest.sdr.sdr import MODEL_SPEC
 
 import invest_reports.utils
 from invest_reports.utils import RasterPlotConfig
@@ -22,8 +22,7 @@ template = env.get_template('sdr-ndr-report.html')
 model_spec = MODEL_SPEC
 model_id = model_spec.model_id
 timestamp = time.strftime('%Y-%m-%d %H:%M')
-# logfile_path = '/Users/eadavis/invest-workspaces/ndr/InVEST-ndr-log-2025-10-28--13_56_40.txt'
-logfile_path = '/Users/eadavis/invest-workspaces/ndr-luzon/InVEST-ndr-log-2025-10-29--14_12_04.txt'
+logfile_path = '/Users/eadavis/invest-workspaces/sdr/InVEST-sdr-log-2025-10-29--15_26_12.txt'
 
 # Get args dict, workspace path, and suffix string.
 _, ds_info = datastack.get_datastack_info(logfile_path)
@@ -36,39 +35,38 @@ if 'results_suffix' in args_dict and args_dict['results_suffix'] != '':
 # Plot inputs.
 inputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters([
     RasterPlotConfig(args_dict['dem_path'], 'continuous'),
-    RasterPlotConfig(args_dict['runoff_proxy_path'], 'continuous'),
-    RasterPlotConfig(args_dict['lulc_path'], 'nominal')
+    RasterPlotConfig(args_dict['erodibility_path'], 'continuous'),
+    RasterPlotConfig(args_dict['erosivity_path'], 'continuous'),
+    RasterPlotConfig(args_dict['lulc_path'], 'nominal'),
 ])
 
 # Plot primary outputs.
-output_raster_plot_configs = []
-if args_dict['calc_n']:
-    output_raster_plot_configs.extend([
-        RasterPlotConfig(
-            os.path.join(workspace, f'n_surface_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-        RasterPlotConfig(
-            os.path.join(workspace, f'n_subsurface_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-        RasterPlotConfig(
-            os.path.join(workspace, f'n_total_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-    ])
-if args_dict['calc_p']:
-    output_raster_plot_configs.extend([
-        RasterPlotConfig(
-            os.path.join(workspace, f'p_surface_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-    ])
-
-outputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
-    output_raster_plot_configs)
+outputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters([
+    RasterPlotConfig(
+        os.path.join(workspace, f'avoided_erosion{suffix_str}.tif'),
+        'continuous', 'linear'),
+    RasterPlotConfig(
+        os.path.join(workspace, f'avoided_export{suffix_str}.tif'),
+        'continuous', 'log'),
+    RasterPlotConfig(
+        os.path.join(workspace, f'sed_deposition{suffix_str}.tif'),
+        'continuous', 'log'),
+    RasterPlotConfig(
+        os.path.join(workspace, f'sed_export{suffix_str}.tif'),
+        'continuous', 'log'),
+    RasterPlotConfig(
+        os.path.join(workspace, f'rkls{suffix_str}.tif'),
+        'continuous', 'linear'),
+    RasterPlotConfig(
+        os.path.join(workspace, f'usle{suffix_str}.tif'),
+        'continuous', 'log'),
+])
 
 # Plot relevant intermediate outputs.
 intermediate_raster_list = [
     RasterPlotConfig(os.path.join(
         workspace, 'intermediate_outputs',
-        f'masked_dem{suffix_str}.tif'), 'continuous'),
+        f'pit_filled_dem{suffix_str}.tif'), 'continuous'),
     RasterPlotConfig(os.path.join(
         workspace, 'intermediate_outputs',
         f'what_drains_to_stream{suffix_str}.tif'), 'binary'),
@@ -84,7 +82,7 @@ stream_network_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
 
 # Generate HTML representation of attribute table from watershed results vector.
 watershed_results_vector_path = os.path.join(
-    workspace, f'watershed_results_ndr{suffix_str}.gpkg')
+    workspace, f'watershed_results_sdr{suffix_str}.shp')
 ws_vector = geopandas.read_file(watershed_results_vector_path)
 ws_vector_table = ws_vector.drop(columns=['geometry']).to_html(
     index=False, na_rep='')
