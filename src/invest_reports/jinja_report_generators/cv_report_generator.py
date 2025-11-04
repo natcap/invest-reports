@@ -8,8 +8,6 @@ import altair
 import geopandas
 import pandas
 from jinja2 import Environment, PackageLoader, select_autoescape
-import natcap.invest.utils
-import natcap.invest.datastack
 
 
 LOGGER = logging.getLogger(__name__)
@@ -368,6 +366,7 @@ def report(file_registry, args_dict, model_spec):
 
 if __name__ == '__main__':
     from natcap.invest.coastal_vulnerability import MODEL_SPEC
+    import natcap.invest.datastack
     handler = logging.StreamHandler(sys.stdout)
     logging.basicConfig(level=logging.INFO, handlers=[handler])
     # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
