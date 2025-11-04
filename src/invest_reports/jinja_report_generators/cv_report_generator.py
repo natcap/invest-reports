@@ -161,21 +161,21 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
     return habitat_map
 
 
-def report(logfile_path, model_spec):
-    # TODO: depending on how these reports are integrated with invest model
-    # execution, it may be prefereable to pass an args_dict and file_registry
-    # directly to the report function.
-    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
-    args_dict = model_spec.preprocess_inputs(ds_info.args)
-    workspace = args_dict['workspace_dir']
-    file_registry_path = os.path.join(
-        workspace, f'file_registry{args_dict['results_suffix']}.json')
-    images_dir = os.path.join(workspace, '_images')
+def report(file_registry, args_dict, model_spec):
+    """Generate an html summary of Coastal Vulnerability results.
+
+    Args:
+        file_registry (dict): The ``natcap.invest.FileRegistry.registry``
+            that was returned by ``natcap.invest.coastal_vulnerability.execute``.
+        args_dict (dict): The arguments that were passed to
+            ``natcap.invest.coastal_vulnerability.execute``.
+        model_spec (natcap.invest.spec.ModelSpec):
+            ``natcap.invest.coastal_vulnerability.MODEL_SPEC``
+    """
+    
+    images_dir = os.path.join(args_dict['workspace_dir'], '_images')
     if not os.path.exists(images_dir):
         os.mkdir(images_dir)
-
-    with open(file_registry_path, 'r') as file:
-        file_registry = json.loads(file.read())
 
     rank_vars = ['R_hab', 'R_wind', 'R_wave', 'R_surge', 'R_relief']
     exposure_geo = geopandas.read_file(file_registry['coastal_exposure'])
@@ -341,7 +341,8 @@ def report(logfile_path, model_spec):
     # Generate HTML document.
     model_name = model_spec.model_title
     report_filename = os.path.join(
-        workspace, f'{model_name.lower()}{args_dict['results_suffix']}.html')
+        args_dict['workspace_dir'],
+        f'{model_name.lower()}{args_dict['results_suffix']}.html')
     with open(report_filename, 'w', encoding='utf-8') as target_file:
         target_file.write(template.render(
             report_script=__file__,
@@ -371,4 +372,13 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, handlers=[handler])
     # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
     logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
-    report(logfile_path, MODEL_SPEC)
+    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
+    args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
+    file_registry_path = os.path.join(
+        args_dict['workspace_dir'],
+        f'file_registry{args_dict['results_suffix']}.json')
+
+    with open(file_registry_path, 'r') as file:
+        file_registry = json.loads(file.read())
+
+    report(file_registry, args_dict, MODEL_SPEC)
