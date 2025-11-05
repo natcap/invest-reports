@@ -159,7 +159,7 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
     return habitat_map
 
 
-def report(file_registry, args_dict, model_spec):
+def report(file_registry, args_dict, model_spec, target_html_filepath):
     """Generate an html summary of Coastal Vulnerability results.
 
     Args:
@@ -338,10 +338,8 @@ def report(file_registry, args_dict, model_spec):
         """
     # Generate HTML document.
     model_name = model_spec.model_title
-    report_filename = os.path.join(
-        args_dict['workspace_dir'],
-        f'{model_name.lower()}{args_dict['results_suffix']}.html')
-    with open(report_filename, 'w', encoding='utf-8') as target_file:
+    
+    with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(template.render(
             report_script=__file__,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
@@ -361,7 +359,7 @@ def report(file_registry, args_dict, model_spec):
             model_spec_outputs=model_spec.outputs,
             accordions_open_on_load=True,
         ))
-    LOGGER.info(f'Created {report_filename}')
+    LOGGER.info(f'Created {target_html_filepath}')
 
 
 if __name__ == '__main__':
@@ -369,8 +367,8 @@ if __name__ == '__main__':
     import natcap.invest.datastack
     handler = logging.StreamHandler(sys.stdout)
     logging.basicConfig(level=logging.INFO, handlers=[handler])
-    # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
-    logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
+    logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
+    # logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
     _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
     args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
     file_registry_path = os.path.join(
@@ -380,4 +378,7 @@ if __name__ == '__main__':
     with open(file_registry_path, 'r') as file:
         file_registry = json.loads(file.read())
 
-    report(file_registry, args_dict, MODEL_SPEC)
+    target_filepath = os.path.join(
+        args_dict['workspace_dir'],
+        f'{MODEL_SPEC.model_id.lower()}_report{args_dict['results_suffix']}.html')
+    report(file_registry, args_dict, MODEL_SPEC, target_filepath)
