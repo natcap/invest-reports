@@ -151,4 +151,15 @@
     margin-top: 0.5rem;
     margin-bottom: 0.5rem;
   }
+  /*Because widgets of varying size tend to be below maps,
+  align to top keeps the actual maps aligned*/
+  .vega-embed {
+    vertical-align: top;
+  }
+  /*stack elements vertically so they are less likely to expand
+  the overall width of the chart wrapper*/
+  .vega-bind {
+    display: flex;
+    flex-direction: column; 
+  }
 </style>

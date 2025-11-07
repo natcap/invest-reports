@@ -10,7 +10,9 @@ dynamic = ["version"]
 dependencies = [
   "natcap.invest>=3.16.2",
   "matplotlib",
-  "jinja2"
+  "jinja2",
+  "geopandas",
+  "altair"
 ]
 
 [tool.setuptools_scm]

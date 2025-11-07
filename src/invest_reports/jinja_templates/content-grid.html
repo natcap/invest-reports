@@ -10,7 +10,7 @@
   <div class="content-grid">
     {% for (item, width) in contents %}
     <div class="content-grid-item" style="width: {{ width }}%">
-      {{ item }}
+      {{ item|safe }}
     </div>
     {% endfor %}
   </div>
