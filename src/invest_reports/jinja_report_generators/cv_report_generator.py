@@ -42,6 +42,10 @@ legend_config = {
     'orient': 'left',
     'gradientLength': 100
 }
+axis_config = {
+    'labelFontSize': 14,
+    'titleFontSize': 14
+}
 
 
 def get_geojson_bbox(geodataframe):
@@ -91,25 +95,6 @@ def chart_base_points(geodataframe):
     return base_points
 
 
-def chart_wave_energy(wave_energy_geodf, energy_units):
-    base_points = chart_base_points(wave_energy_geodf)
-
-    points = base_points.mark_circle(
-        filled=point_fill,
-        strokeWidth=stroke_width,
-    ).encode(
-        color=altair.Color(
-            'max_E_type:N',
-            legend=altair.Legend(title='dominant wave type')
-        ),
-        size=altair.Size(
-            'wave',
-            legend=altair.Legend(title=f'wave energy\n ({energy_units})'))
-    )
-
-    return points
-
-
 def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
     habitat_df = pandas.read_csv(habitat_protection_csv)
     habitat_geodf = exposure_geodf[['shore_id', 'geometry', 'habitat_role']].join(
@@ -153,7 +138,7 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
         width=map_width,
         height=map_width / xy_ratio,
         title='The role of habitat in reducing coastal exposure'
-    ).configure_legend(**legend_config)
+    ).configure_legend(**legend_config).configure_axis(**axis_config)
     return habitat_map
 
 
@@ -265,7 +250,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     ).properties(
         width=map_width,
         height=200
-    )
+    ).configure_axis(**axis_config)
     exposure_histogram_json = exposure_histogram.to_json()
 
     base_rank_vars_chart = base_points.mark_circle(
@@ -289,11 +274,20 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     rank_vars_figure = altair.vconcat(
         altair.hconcat(*rank_vars_chart_list[:n_cols]),
         altair.hconcat(*rank_vars_chart_list[n_cols:])
-    )
+    ).configure_axis(**axis_config)
     rank_vars_figure_json = rank_vars_figure.to_json()
 
+    csv_spec = model_spec.get_output('intermediate_exposure_csv')
     intermediate_vars = ['relief', 'wind', 'wave', 'surge']
+    units = [natcap.invest.spec.format_unit(csv_spec.get_column(var).units)
+             for var in intermediate_vars]
+    renamed_vars = [f'{var} {u}'
+                    for var, u in zip(intermediate_vars, units)]
     intermediate_df = pandas.read_csv(file_registry['intermediate_exposure_csv'])
+    variable_label_lookup = {var: new_var for var, new_var 
+                             in zip(intermediate_vars, renamed_vars)}
+    intermediate_df.rename(
+        columns=variable_label_lookup, inplace=True)
     facetted_histograms = altair.Chart(intermediate_df).mark_bar().encode(
         altair.X(
             altair.repeat('column'),
@@ -303,22 +297,26 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     ).properties(
         width=map_width // 2
     ).repeat(
-        column=intermediate_vars,
-    )
+        column=renamed_vars,
+    ).configure_axis(**axis_config)
     facetted_histograms_json = facetted_histograms.to_json()
 
     wave_energy_geo = geopandas.read_file(file_registry['wave_energies'])
-    # https://github.com/natcap/invest/issues/2216
-    # energy_units = natcap.invest.spec.format_unit(
-    #     model_spec.get_output('wave_energies').get_field('E_ocean').units)
-    # https://github.com/natcap/invest/issues/2217
-    # energy_units = geometamaker.describe(
-    #     file_registry['wave_energies']).get_field_description('E_ocean').units
-    energy_units = 'kW/meter'
+    wave_var = variable_label_lookup['wave']
     wave_energy_geo = wave_energy_geo.join(
-        intermediate_df[['shore_id', 'wave']].set_index('shore_id'), on='shore_id')
-
-    wave_points_chart = chart_wave_energy(wave_energy_geo, energy_units)
+        intermediate_df[['shore_id', wave_var]].set_index(
+            'shore_id'), on='shore_id')
+    base_wave_points = chart_base_points(wave_energy_geo)
+    wave_points_chart = base_wave_points.mark_circle(
+        filled=point_fill,
+        strokeWidth=stroke_width,
+    ).encode(
+        color=altair.Color(
+            'max_E_type:N',
+            legend=altair.Legend(title='dominant wave type')
+        ),
+        size=altair.Size(wave_var)
+    )
     wave_energy_map = landmass_chart + wave_points_chart
     wave_energy_map = wave_energy_map.properties(
         width=map_width + 30,  # extra space for legend
