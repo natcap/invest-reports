@@ -9,7 +9,7 @@ Display metadata about outputs of an invest model.
   {% for output in model_spec_outputs %}
     <dt>{{ output.path }}</dt>
     <dd><p>{{ output.about }}</p></dd>
-    {% if output.units %}
+    {% if output.units is defined %}
         <dd>Units: {{ output.units }}</dd>
     {% endif %}
   {% endfor %}

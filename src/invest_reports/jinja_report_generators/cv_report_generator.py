@@ -7,10 +7,12 @@ import time
 import altair
 import geopandas
 import pandas
-from jinja2 import Environment, PackageLoader, select_autoescape
 
+from invest_reports import jinja_env
 
 LOGGER = logging.getLogger(__name__)
+
+TEMPLATE = jinja_env.get_template('coastal_vulnerability.html')
 
 # vegafusion (`altair.data_transformers.enable("vegafusion")`)
 # can perform transformations before embedding
@@ -21,13 +23,6 @@ LOGGER = logging.getLogger(__name__)
 # transforms will get under the 5000 row default limit. So disabling
 # the row limit is the only option.
 altair.data_transformers.disable_max_rows()
-
-# Locate report template.
-env = Environment(
-    loader=PackageLoader('invest_reports', 'jinja_templates'),
-    autoescape=select_autoescape()
-)
-template = env.get_template('coastal_vulnerability.html')
 
 stroke_width = 0.75
 # When points are low-density, fill is nicer, or a thicker stroke.
@@ -346,10 +341,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     model_name = model_spec.model_title
     
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
-        target_file.write(template.render(
+        target_file.write(TEMPLATE.render(
             report_script=__file__,
             timestamp=time.strftime('%Y-%m-%d %H:%M'),
             page_title=f'InVEST Results: {model_name}',
+            model_id=model_spec.model_id,
             model_name=model_name,
             model_description=model_description,
             userguide_page=model_spec.userguide,
