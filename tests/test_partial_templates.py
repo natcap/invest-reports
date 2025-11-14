@@ -1,14 +1,10 @@
 import unittest
 
-from jinja2 import Environment, PackageLoader, select_autoescape
+from invest_reports import jinja_env
 
 
 class JinjaTemplateUnitTests(unittest.TestCase):
     """Unit tests for partial templates."""
-
-    env = Environment(
-        loader=PackageLoader('invest_reports', 'jinja_templates'),
-        autoescape=select_autoescape())
 
     def test_list_metadata(self):
         """Test list_metadata macro."""
@@ -21,7 +17,7 @@ class JinjaTemplateUnitTests(unittest.TestCase):
                 <div>{{ list_metadata(model_spec_outputs) }}</div>
             </html>
             """
-        template = self.env.from_string(template_str)
+        template = jinja_env.from_string(template_str)
         html = template.render(model_spec_outputs=MODEL_SPEC.outputs)
         for output in MODEL_SPEC.outputs:
             self.assertIn(output.path, html)
