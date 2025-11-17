@@ -40,11 +40,11 @@ legend_config = {
     'labelFontSize': 14,
     'titleFontSize': 14,
     'orient': 'left',
-    'gradientLength': 100
+    'gradientLength': 150
 }
 axis_config = {
     'labelFontSize': 14,
-    'titleFontSize': 14
+    'titleFontSize': 14,
 }
 
 
@@ -203,8 +203,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         size=point_size_conditional,
         color=altair.Color(
             'exposure',
-            legend=altair.Legend(title='exposure')
-        ).scale(scheme='plasma', reverse=True).bin(maxbins=4),
+            legend=altair.Legend(
+                title='exposure', 
+                values=[1, 2, 3, 4, 5],  # force these values and labels
+                labelExpr="datum.value",  # value refers to the list above.
+            )
+        ).scale(scheme='plasma', reverse=True).bin(extent=[1.0, 5.0]),
         tooltip=tooltip
     ).add_params(scale_population)
 
