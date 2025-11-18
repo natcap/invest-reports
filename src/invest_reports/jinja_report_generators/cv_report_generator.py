@@ -292,6 +292,13 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         altair.hconcat(*rank_vars_chart_list[n_cols:])
     ).configure_axis(**axis_config)
     rank_vars_figure_json = rank_vars_figure.to_json()
+    rank_vars_figure_caption = \
+        """
+        These variables are the individual components of the coastal exposure index.
+        The exposure index is calculated as the geometric mean of these variables.
+        If a shore point is missing data about one of these variables, then the
+        exposure index will also be missing at that point.
+        """
 
     csv_spec = model_spec.get_output('intermediate_exposure_csv')
     intermediate_vars = ['relief', 'wind', 'wave', 'surge']
@@ -316,6 +323,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         column=renamed_vars,
     ).configure_axis(**axis_config)
     facetted_histograms_json = facetted_histograms.to_json()
+    facetted_histograms_caption = model_spec.get_output(
+        'intermediate_exposure').about
 
     wave_energy_geo = geopandas.read_file(file_registry['wave_energies'])
     wave_var = variable_label_lookup['wave']
@@ -340,6 +349,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         title='local wind-driven waves vs. open ocean waves'
     ).configure_legend(**legend_config)
     wave_energy_map_json = wave_energy_map.to_json()
+    wave_energy_map_caption = model_spec.get_output(
+        'wave_energies').about
 
     # later this may be in model_spec
     model_description = \
@@ -372,8 +383,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             habitat_table_description=habitat_table_description,
             exposure_histogram_json=exposure_histogram_json,
             facetted_histograms_json=facetted_histograms_json,
+            facetted_histograms_caption=facetted_histograms_caption,
             rank_vars_figure_json=rank_vars_figure_json,
+            rank_vars_figure_caption=rank_vars_figure_caption,
             wave_energy_map_json=wave_energy_map_json,
+            wave_energy_map_caption=wave_energy_map_caption,
             model_spec_outputs=model_spec.outputs,
             accordions_open_on_load=True,
         ))
