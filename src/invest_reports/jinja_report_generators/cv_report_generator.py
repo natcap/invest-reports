@@ -112,7 +112,7 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
     habitat_radio = altair.binding_radio(
         options=['All'] + list(habitats),
         labels=['All'] + list(habitats),
-        name='Show points protected by each habitat:'
+        name='Show points protected by each habitat (habitat_role includes all habitats):'
     )
     hab_param = altair.param(value='All', bind=habitat_radio)
 
@@ -129,7 +129,15 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
         size=point_size
     ).encode(
         color=altair.Color('habitat_role').scale(scheme='viridis', reverse=True),
-        tooltip=altair.Tooltip(list(habitats), format='.2f')
+        tooltip=[
+            {
+                'field': 'habitat_role',
+                'format': '.2f'
+            },
+            {
+                'field': 'hab_presence'
+            }
+        ]
     )
 
     _, xy_ratio = get_geojson_bbox(exposure_geodf)
@@ -233,12 +241,16 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         title='coastal exposure'
     ).configure_legend(**legend_config)
     exposure_map_json = exposure_map.to_json()
+    exposure_map_caption = model_spec.get_output(
+        'coastal_exposure').get_field('exposure').about
 
     habitat_map = chart_habitat_map(
         file_registry['habitat_protection'],
         exposure_geo,
         landmass_chart)
     habitat_map_json = habitat_map.to_json()
+    habitat_map_caption = model_spec.get_output(
+        'coastal_exposure').get_field('habitat_role').about
 
     habitat_params_df = pandas.read_csv(args_dict['habitat_table_path'])
     habitat_table_description = f'Rank = {model_spec.get_input(
@@ -353,7 +365,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             userguide_page=model_spec.userguide,
             args_dict=args_dict,
             exposure_map_json=exposure_map_json,
+            exposure_map_caption=exposure_map_caption,
             habitat_map_json=habitat_map_json,
+            habitat_map_caption=habitat_map_caption,
             habitat_params_table=habitat_params_df.to_html(),
             habitat_table_description=habitat_table_description,
             exposure_histogram_json=exposure_histogram_json,
