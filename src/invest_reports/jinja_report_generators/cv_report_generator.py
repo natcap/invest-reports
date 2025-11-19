@@ -242,7 +242,10 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     ).configure_legend(**legend_config)
     exposure_map_json = exposure_map.to_json()
     exposure_map_caption = model_spec.get_output(
-        'coastal_exposure').get_field('exposure').about
+        'coastal_exposure').get_field('exposure').about        
+    exposure_map_source_list = [
+        model_spec.get_output('coastal_exposure').path,
+        model_spec.get_output('clipped_projected_landmass').path]
 
     habitat_map = chart_habitat_map(
         file_registry['habitat_protection'],
@@ -251,10 +254,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     habitat_map_json = habitat_map.to_json()
     habitat_map_caption = model_spec.get_output(
         'coastal_exposure').get_field('habitat_role').about
+    habitat_map_source_list = [
+        model_spec.get_output('coastal_exposure').path,
+        model_spec.get_output('habitat_protection').path]
 
     habitat_params_df = pandas.read_csv(args_dict['habitat_table_path'])
-    habitat_table_description = f'Rank = {model_spec.get_input(
+    habitat_table_caption = f'Rank = {model_spec.get_input(
         'habitat_table_path').get_column('rank').about}'
+    habitat_table_source_list = [args_dict['habitat_table_path']]
 
     exposure_histogram = altair.Chart(exposure_geo).mark_bar().encode(
         x=altair.X('exposure', title='coastal exposure').bin(step=0.2),
@@ -299,6 +306,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         If a shore point is missing data about one of these variables, then the
         exposure index will also be missing at that point.
         """
+    rank_vars_figure_source_list = [model_spec.get_output('coastal_exposure').path]
 
     csv_spec = model_spec.get_output('intermediate_exposure_csv')
     intermediate_vars = ['relief', 'wind', 'wave', 'surge']
@@ -325,6 +333,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     facetted_histograms_json = facetted_histograms.to_json()
     facetted_histograms_caption = model_spec.get_output(
         'intermediate_exposure').about
+    facetted_histograms_source_list = [model_spec.get_output(
+        'intermediate_exposure').path]
 
     wave_energy_geo = geopandas.read_file(file_registry['wave_energies'])
     wave_var = variable_label_lookup['wave']
@@ -351,6 +361,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     wave_energy_map_json = wave_energy_map.to_json()
     wave_energy_map_caption = model_spec.get_output(
         'wave_energies').about
+    wave_energy_map_source_list = [
+        model_spec.get_output('wave_energies').path,
+        model_spec.get_output('intermediate_exposure').path]
 
     # later this may be in model_spec
     model_description = \
@@ -377,17 +390,23 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             args_dict=args_dict,
             exposure_map_json=exposure_map_json,
             exposure_map_caption=exposure_map_caption,
+            exposure_map_source_list=exposure_map_source_list,
             habitat_map_json=habitat_map_json,
             habitat_map_caption=habitat_map_caption,
+            habitat_map_source_list=habitat_map_source_list,
             habitat_params_table=habitat_params_df.to_html(),
-            habitat_table_description=habitat_table_description,
+            habitat_table_caption=habitat_table_caption,
+            habitat_table_source_list=habitat_table_source_list,
             exposure_histogram_json=exposure_histogram_json,
             facetted_histograms_json=facetted_histograms_json,
             facetted_histograms_caption=facetted_histograms_caption,
+            facetted_histograms_source_list=facetted_histograms_source_list,
             rank_vars_figure_json=rank_vars_figure_json,
             rank_vars_figure_caption=rank_vars_figure_caption,
+            rank_vars_figure_source_list=rank_vars_figure_source_list,
             wave_energy_map_json=wave_energy_map_json,
             wave_energy_map_caption=wave_energy_map_caption,
+            wave_energy_map_source_list=wave_energy_map_source_list,
             model_spec_outputs=model_spec.outputs,
             accordions_open_on_load=True,
         ))
