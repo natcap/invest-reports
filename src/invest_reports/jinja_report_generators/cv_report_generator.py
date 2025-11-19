@@ -40,7 +40,7 @@ legend_config = {
     'labelFontSize': 14,
     'titleFontSize': 14,
     'orient': 'left',
-    'gradientLength': 150
+    'gradientLength': 120
 }
 axis_config = {
     'labelFontSize': 14,
