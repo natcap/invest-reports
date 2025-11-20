@@ -109,21 +109,8 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
         return ','.join(hab_list)
     habitat_geodf['hab_presence'] = habitat_geodf.apply(concat_habitats, axis=1)
 
-    habitat_radio = altair.binding_radio(
-        options=['All'] + list(habitats),
-        labels=['All'] + list(habitats),
-        name='Show points protected by each habitat (habitat_role includes all habitats):'
-    )
-    hab_param = altair.param(value='All', bind=habitat_radio)
-
     habitat_base_points = chart_base_points(habitat_geodf)
-
-    habitat_points = habitat_base_points.add_params(
-        hab_param
-    ).transform_filter(
-        (hab_param == 'All') |
-        altair.expr.test(hab_param, altair.datum.hab_presence)
-    ).mark_circle(
+    habitat_points = habitat_base_points.mark_circle(
         filled=point_fill,
         strokeWidth=stroke_width,
         size=point_size
