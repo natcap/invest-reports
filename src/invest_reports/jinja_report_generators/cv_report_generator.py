@@ -194,8 +194,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         scale_population = altair.param(value=False, bind=population_checkbox)
 
     tooltip = altair.Tooltip(tooltip_vars, format='.2f')
-    null_checkbox = altair.binding_checkbox(name='show null')
-    show_null = altair.param(value=False, bind=null_checkbox)
 
     point_size_conditional = altair.condition(
         scale_population,
@@ -220,21 +218,28 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         tooltip=tooltip
     ).add_params(scale_population)
 
-    null_points_chart = base_points.add_params(
-        show_null
-    ).transform_filter(
-        show_null & ~altair.expr.isValid(altair.datum.exposure)
-    ).mark_circle(
-        filled=point_fill,
-        strokeWidth=stroke_width,
-        color='gray',
-        invalid='show'
-    ).encode(
-        size=point_size_conditional,
-        tooltip=tooltip
-    ).add_params(scale_population)
+    na_count = exposure_geo.exposure.isna().sum()
+    if na_count:
+        null_checkbox = altair.binding_checkbox(
+            name=f'{na_count} point(s) missing the exposure index. Show:')
+        show_null = altair.param(value=False, bind=null_checkbox)
+        null_points_chart = base_points.add_params(
+            show_null
+        ).transform_filter(
+            show_null & ~altair.expr.isValid(altair.datum.exposure)
+        ).mark_point(
+            shape='M-1, -1, L1, 1, M-1, 1, L1, -1',  # an X
+            stroke='black',
+            strokeWidth=1.5,
+            invalid='show',
+            size=36,
+        ).encode(
+            tooltip=tooltip
+        )
+        exposure_map = landmass_chart + null_points_chart + exposure_points_chart
+    else:
+        exposure_map = landmass_chart + exposure_points_chart
 
-    exposure_map = landmass_chart + null_points_chart + exposure_points_chart
     exposure_map = exposure_map.properties(
         width=map_width,
         height=map_width / xy_ratio,
