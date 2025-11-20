@@ -191,7 +191,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         exposure_geo.population = exposure_geo.population.fillna(-1)
         tooltip_vars.append('population')
         population_checkbox = altair.binding_checkbox(name='scale by population')
-        scale_population = altair.param(value=True, bind=population_checkbox)
+        scale_population = altair.param(value=False, bind=population_checkbox)
 
     tooltip = altair.Tooltip(tooltip_vars, format='.2f')
     null_checkbox = altair.binding_checkbox(name='show null')
@@ -324,7 +324,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             altair.repeat('column'),
             type='quantitative',
             bin=altair.Bin(nice=True)),
-        y='count()'
+        y=altair.Y('count()')
     ).properties(
         width=map_width // 2
     ).repeat(
@@ -341,6 +341,13 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     wave_energy_geo = wave_energy_geo.join(
         intermediate_df[['shore_id', wave_var]].set_index(
             'shore_id'), on='shore_id')
+    wave_checkbox = altair.binding_checkbox(name='scale by wave energy')
+    scale_wave = altair.param(value=False, bind=wave_checkbox)
+    point_size_conditional = altair.condition(
+        scale_wave,
+        f'{wave_var}:Q',
+        altair.value(point_size))
+
     base_wave_points = chart_base_points(wave_energy_geo)
     wave_points_chart = base_wave_points.mark_circle(
         filled=point_fill,
@@ -350,8 +357,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             'max_E_type:N',
             legend=altair.Legend(title='dominant wave type')
         ),
-        size=altair.Size(wave_var)
-    )
+        size=point_size_conditional
+    ).add_params(scale_wave)
     wave_energy_map = landmass_chart + wave_points_chart
     wave_energy_map = wave_energy_map.properties(
         width=map_width + 30,  # extra space for legend
@@ -359,8 +366,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         title='local wind-driven waves vs. open ocean waves'
     ).configure_legend(**legend_config)
     wave_energy_map_json = wave_energy_map.to_json()
-    wave_energy_map_caption = model_spec.get_output(
-        'wave_energies').about
+
+    wave_energy_map_caption = [model_spec.get_output(
+        'wave_energies').about]
+    wave_energy_map_caption.append(
+        model_spec.get_input('max_fetch_distance').about)
     wave_energy_map_source_list = [
         model_spec.get_output('wave_energies').path,
         model_spec.get_output('intermediate_exposure').path]
