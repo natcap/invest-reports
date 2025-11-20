@@ -57,3 +57,4 @@ class JinjaTemplateUnitTests(unittest.TestCase):
         html = template.render(text=text_list)
         for text in text_list:
             self.assertIn(text, html)
+        self.assertNotIn('Sources', html)
