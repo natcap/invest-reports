@@ -316,9 +316,10 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             altair.repeat('column'),
             type='quantitative',
             bin=altair.Bin(nice=True)),
-        y=altair.Y('count()')
+        y=altair.Y('count()', title=None)
     ).properties(
-        width=map_width // 2
+        width=map_width // 2,
+        title='Foo'
     ).repeat(
         column=renamed_vars,
     ).configure_axis(**axis_config)
