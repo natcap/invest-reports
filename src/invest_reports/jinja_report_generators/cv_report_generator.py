@@ -177,8 +177,15 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         # If population is missing we still want to plot the point.
         exposure_geo.population = exposure_geo.population.fillna(-1)
         tooltip_vars.append('population')
-        population_checkbox = altair.binding_checkbox(name='scale by population')
+        population_spec = model_spec.get_output(
+            'coastal_exposure').get_field('population')
+        population_checkbox = altair.binding_checkbox(
+            name=f'scale by population ({natcap.invest.spec.format_unit(
+                population_spec.units)})')
         scale_population = altair.param(value=False, bind=population_checkbox)
+        population_caption = population_spec.about + """
+             '-1' represents no valid population data within the search radius
+            around a point."""
 
     tooltip = altair.Tooltip(tooltip_vars, format='.2f')
 
@@ -233,8 +240,10 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         title='coastal exposure'
     ).configure_legend(**legend_config)
     exposure_map_json = exposure_map.to_json()
-    exposure_map_caption = model_spec.get_output(
-        'coastal_exposure').get_field('exposure').about        
+    exposure_map_caption = [model_spec.get_output(
+        'coastal_exposure').get_field('exposure').about]
+    if population_caption:
+        exposure_map_caption.append(population_caption)
     exposure_map_source_list = [
         model_spec.get_output('coastal_exposure').path,
         model_spec.get_output('clipped_projected_landmass').path]
