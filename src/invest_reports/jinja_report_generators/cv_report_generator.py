@@ -1,14 +1,14 @@
-import json
 import logging
 import os
-import sys
 import time
 
 import altair
 import geopandas
 import pandas
 
+import natcap.invest.spec
 from invest_reports import jinja_env
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -43,8 +43,8 @@ legend_config = {
     'gradientLength': 120
 }
 axis_config = {
-    'labelFontSize': 14,
-    'titleFontSize': 14,
+    'labelFontSize': 12,
+    'titleFontSize': 12,
 }
 
 
@@ -413,25 +413,3 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             accordions_open_on_load=True,
         ))
     LOGGER.info(f'Created {target_html_filepath}')
-
-
-if __name__ == '__main__':
-    from natcap.invest.coastal_vulnerability import MODEL_SPEC
-    import natcap.invest.datastack
-    handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
-    # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
-    logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
-    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
-    args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
-    file_registry_path = os.path.join(
-        args_dict['workspace_dir'],
-        f'file_registry{args_dict['results_suffix']}.json')
-
-    with open(file_registry_path, 'r') as file:
-        file_registry = json.loads(file.read())
-
-    target_filepath = os.path.join(
-        args_dict['workspace_dir'],
-        f'{MODEL_SPEC.model_id.lower()}_report{args_dict['results_suffix']}.html')
-    report(file_registry, args_dict, MODEL_SPEC, target_filepath)
