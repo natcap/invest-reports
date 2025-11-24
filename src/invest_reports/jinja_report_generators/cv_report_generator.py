@@ -311,18 +311,22 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
                              in zip(intermediate_vars, renamed_vars)}
     intermediate_df.rename(
         columns=variable_label_lookup, inplace=True)
-    facetted_histograms = altair.Chart(intermediate_df).mark_bar().encode(
-        altair.X(
-            altair.repeat('column'),
-            type='quantitative',
-            bin=altair.Bin(nice=True)),
-        y=altair.Y('count()', title=None)
-    ).properties(
-        width=map_width // 2,
-        title='Foo'
-    ).repeat(
-        column=renamed_vars,
-    ).configure_axis(**axis_config)
+    histograms = []
+    for i, var in enumerate(renamed_vars):
+        # remove redundant axis titles
+        title = 'Count of Records' if i == 0 else None
+        hist = altair.Chart(intermediate_df).mark_bar().encode(
+            altair.X(
+                var,
+                type='quantitative',
+                bin=altair.Bin(nice=True)),
+            y=altair.Y('count()', title=title)
+        ).properties(
+            width=map_width // 2
+        )
+        histograms.append(hist)
+    facetted_histograms = altair.hconcat(
+        *histograms).configure_axis(**axis_config)
     facetted_histograms_json = facetted_histograms.to_json()
     facetted_histograms_caption = model_spec.get_output(
         'intermediate_exposure').about
