@@ -54,6 +54,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     input_raster_stats_table = invest_reports.utils.raster_inputs_summary(
         args_dict).to_html(na_rep='')
 
+    stats_table_note = (
+        '"Valid percent" indicates the percent of pixels that are not '
+        'nodata. Comparing "valid percent" values across rasters may help '
+        'you identify cases of unexpected nodata.'
+    )
+
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
             report_script=__file__,
@@ -69,6 +75,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             ws_vector_table=ws_vector_table,
             output_raster_stats_table=output_raster_stats_table,
             input_raster_stats_table=input_raster_stats_table,
+            stats_table_note=stats_table_note,
             model_spec_outputs=model_spec.outputs,
             accordions_open_on_load=True,
         ))
