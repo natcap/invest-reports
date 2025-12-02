@@ -281,7 +281,27 @@ def geometamaker_load(filepath):
     return geometamaker.geometamaker.RESOURCE_MODELS[yaml_dict['type']](**yaml_dict)
 
 
-STATS_LIST = ['STATISTICS_VALID_PERCENT', 'STATISTICS_MINIMUM', 'STATISTICS_MAXIMUM', 'STATISTICS_MEAN']
+STATS_LIST = [
+    ('STATISTICS_MINIMUM', 'Minimum'),
+    ('STATISTICS_MAXIMUM', 'Maximum'),
+    ('STATISTICS_MEAN', 'Mean'),
+    ('STATISTICS_VALID_PERCENT', 'Valid percent'),
+]
+
+
+def _build_stats_table_row(resource, band):
+    # @TODO: use scientific notation for values with many (how many?) digits
+    # pandas.set_option('display.float_format', '{:.2E}'.format)
+    row = {}
+    for (stat_key, display_name) in STATS_LIST:
+        row[display_name] = band.gdal_metadata.get(stat_key) or 'unknown'
+    (width, height) = (
+        resource.data_model.raster_size['width'],
+        resource.data_model.raster_size['height'])
+    row['Count'] = (width * height) or 'unknown'
+    row['Nodata value'] = band.nodata or 'unknown'
+    row['Units'] = band.units or 'unknown'
+    return row
 
 
 def raster_workspace_summary(workspace):
@@ -296,39 +316,21 @@ def raster_workspace_summary(workspace):
                     print(filepath)
                     raise err
                 if isinstance(resource, geometamaker.models.RasterResource):
-                    name = os.path.basename(resource.path)
+                    filename = os.path.basename(resource.path)
                     band = resource.get_band_description(1)
-                    raster_summary[name] = {
-                        k: v for k, v in band.gdal_metadata.items()
-                        if k in STATS_LIST}
-                    raster_summary[name]['units'] = band.units
+                    raster_summary[filename] = _build_stats_table_row(
+                        resource, band)
     return pandas.DataFrame(raster_summary).T
 
 
 def raster_inputs_summary(args_dict):
     raster_summary = {}
-    for k, v in args_dict.items():
+    for v in args_dict.values():
         if isinstance(v, str) and os.path.isfile(v):
             resource = geometamaker.describe(v, compute_stats=True)
             if isinstance(resource, geometamaker.models.RasterResource):
-                name = os.path.basename(resource.path)
+                filename = os.path.basename(resource.path)
                 band = resource.get_band_description(1)
-                raster_summary[name] = {
-                    k: v for k, v in band.gdal_metadata.items()
-                    if k in STATS_LIST}
-                raster_summary[name]['units'] = band.units
+                raster_summary[filename] = _build_stats_table_row(
+                    resource, band)
     return pandas.DataFrame(raster_summary).T
-
-
-def table_description_to_md(filepath):
-    resource = geometamaker.describe(filepath)
-    fields = resource._get_fields()
-    md_list = []
-    for field in fields:
-        if field.description:
-            md_list.append(
-                f"""
-                **{field.name}** (units: {field.units})
-                {field.description}
-                """)
-    return mo.md(''.join(md_list))
