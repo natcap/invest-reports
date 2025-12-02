@@ -300,7 +300,11 @@ def _build_stats_table_row(resource, band):
         resource.data_model.raster_size['height'])
     row['Count'] = (width * height) or 'unknown'
     row['Nodata value'] = band.nodata or 'unknown'
-    row['Units'] = band.units or 'unknown'
+    # band.units may be '', which can mean 'unitless', 'unknown', or 'other'
+    # @TODO: standardize string representations to help distinguish between
+    # 'unitless', 'other/multiple/it depends', and truly 'unknown'
+    print(band.units)
+    row['Units'] = band.units
     return row
 
 
@@ -333,4 +337,8 @@ def raster_inputs_summary(args_dict):
                 band = resource.get_band_description(1)
                 raster_summary[filename] = _build_stats_table_row(
                     resource, band)
+                # Remove 'Units' column if all units are blank
+                if not any(raster_summary[filename]['Units']):
+                    del raster_summary[filename]['Units']
+
     return pandas.DataFrame(raster_summary).T
