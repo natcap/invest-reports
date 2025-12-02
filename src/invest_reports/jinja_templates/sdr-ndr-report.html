@@ -31,7 +31,9 @@
 
   {{ accordion_section(
     'Output Raster Stats',
-    output_raster_stats_table | safe,
+    wide_table(
+      output_raster_stats_table | safe,
+    )
   )}}
 
   <h2 class="section-header">Inputs</h2>
@@ -48,7 +50,9 @@
 
   {{ accordion_section(
     'Input Raster Stats',
-    input_raster_stats_table | safe,
+    wide_table(
+      input_raster_stats_table | safe,
+    )
   )}}
 
   <h2 class="section-header">Metadata</h2>
