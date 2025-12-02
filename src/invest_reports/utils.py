@@ -303,7 +303,6 @@ def _build_stats_table_row(resource, band):
     # band.units may be '', which can mean 'unitless', 'unknown', or 'other'
     # @TODO: standardize string representations to help distinguish between
     # 'unitless', 'other/multiple/it depends', and truly 'unknown'
-    print(band.units)
     row['Units'] = band.units
     return row
 
