@@ -6,7 +6,7 @@ import sys
 from invest_reports import jinja_env
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
-from invest_reports.utils import RasterPlotConfigGroup
+from invest_reports.utils import RasterPlotConfig, RasterPlotConfigGroup
 
 LOGGER = logging.getLogger(__name__)
 
@@ -14,24 +14,38 @@ TEMPLATE = jinja_env.get_template('sdr-ndr-report.html')
 
 INPUT_RASTER_PLOT_TUPLES = [
     ('dem_path', 'continuous'),
-    ('erodibility_path', 'continuous'),
-    ('erosivity_path', 'continuous'),
-    ('lulc_path', 'nominal'),
+    ('runoff_proxy_path', 'continuous'),
+    ('lulc_path', 'nominal')
 ]
 
-OUTPUT_RASTER_PLOT_TUPLES = [
-    ('avoided_erosion', 'continuous', 'linear'),
-    ('avoided_export', 'continuous', 'log'),
-    ('sed_deposition', 'continuous', 'log'),
-    ('sed_export', 'continuous', 'log'),
-    ('rkls', 'continuous', 'linear'),
-    ('usle', 'continuous', 'log'),
-]
+OUTPUT_RASTER_PLOT_TUPLES = {
+    'calc_n': [
+        ('n_surface_export', 'continuous', 'linear'),
+        ('n_subsurface_export', 'continuous', 'linear'),
+        ('n_total_export', 'continuous', 'linear'),
+    ],
+    'calc_p': [
+        ('p_surface_export', 'continuous', 'linear')
+    ],
+}
 
 INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
-    ('pit_filled_dem', 'continuous'),
+    ('masked_dem', 'continuous'),
     ('what_drains_to_stream', 'binary'),
 ]
+
+
+def _build_output_raster_plot_configs(args_dict, file_registry):
+    output_raster_plot_tuples = []
+    if args_dict['calc_n']:
+        output_raster_plot_tuples.extend(
+            OUTPUT_RASTER_PLOT_TUPLES['calc_n'])
+    if args_dict['calc_p']:
+        output_raster_plot_tuples.extend(
+            OUTPUT_RASTER_PLOT_TUPLES['calc_p'])
+    return [
+        RasterPlotConfig(file_registry[output_id], datatype, transform)
+        for (output_id, datatype, transform) in output_raster_plot_tuples]
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
@@ -53,8 +67,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     input_raster_plot_configs = sdr_ndr_utils.build_input_raster_plot_configs(
         args_dict, INPUT_RASTER_PLOT_TUPLES)
 
-    output_raster_plot_configs = sdr_ndr_utils.build_output_raster_plot_configs(
-        file_registry, OUTPUT_RASTER_PLOT_TUPLES)
+    output_raster_plot_configs = _build_output_raster_plot_configs(
+        args_dict, file_registry)
 
     intermediate_raster_plot_configs = sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
         args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
@@ -71,11 +85,11 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
 # @TODO: remove this block for InVEST Workbench integration
 if __name__ == '__main__':
-    from natcap.invest.sdr.sdr import MODEL_SPEC
+    from natcap.invest.ndr.ndr import MODEL_SPEC
     import natcap.invest.datastack
     handler = logging.StreamHandler(sys.stdout)
     logging.basicConfig(level=logging.INFO, handlers=[handler])
-    logfile_path = '/Users/eadavis/invest-workspaces/sdr/InVEST-sdr-log-2025-10-29--15_26_12.txt'
+    logfile_path = '/Users/eadavis/invest-workspaces/ndr/InVEST-ndr-log-2025-12-01--15_34_31.txt'
     _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
     args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
     file_registry_path = os.path.join(

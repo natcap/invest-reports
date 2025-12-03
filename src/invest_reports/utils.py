@@ -41,6 +41,16 @@ class RasterPlotConfig:
         self.transform = transform if not None else 'linear'
 
 
+class RasterPlotConfigGroup:
+    def __init__(self,
+                 inputs: list[RasterPlotConfig],
+                 outputs: list[RasterPlotConfig],
+                 intermediates: list[RasterPlotConfig]):
+        self.inputs = inputs
+        self.outputs = outputs
+        self.intermediates = intermediates
+
+
 def read_masked_array(filepath, resample_method):
     info = pygeoprocessing.get_raster_info(filepath)
     nodata = info['nodata'][0]
