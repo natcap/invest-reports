@@ -22,7 +22,7 @@ template = env.get_template('sdr-ndr-report.html')
 model_spec = MODEL_SPEC
 model_id = model_spec.model_id
 timestamp = time.strftime('%Y-%m-%d %H:%M')
-logfile_path = '/Users/eadavis/invest-workspaces/sdr/InVEST-sdr-log-2025-10-29--15_26_12.txt'
+logfile_path = 'C:/Users/dmf/projects/forum/sdr/sampledata/InVEST-sdr-log-2025-10-06--15_36_34.txt'
 
 # Get args dict, workspace path, and suffix string.
 _, ds_info = datastack.get_datastack_info(logfile_path)

@@ -8,18 +8,19 @@ import numpy
 import pygeoprocessing
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import pandas
 import yaml
 from osgeo import gdal
 
 
-MATPLOTLIB_PARAMS = {
-    'legend.fontsize': 'small',
-    'axes.titlesize': 'small',
-    'xtick.labelsize': 'small',
-    'ytick.labelsize': 'small'
-    }
-plt.rcParams.update(MATPLOTLIB_PARAMS)
+# MATPLOTLIB_PARAMS = {
+#     'legend.fontsize': 'small',
+#     'axes.titlesize': 'small',
+#     'xtick.labelsize': 'small',
+#     'ytick.labelsize': 'small'
+#     }
+# plt.rcParams.update(MATPLOTLIB_PARAMS)
 
 # We set report container max width to 80rem.
 # img is set to width:100%, but it's best if figures are sized to
@@ -70,8 +71,8 @@ def read_masked_array(filepath, resample_method):
 COLORMAPS = {
     'continuous': 'viridis',
     'divergent': 'BrBG',
-    'nominal': 'Set3',
-    'binary': 'binary',
+    'nominal': 'tab20',
+    'binary': ListedColormap(["#3a3a3a", "#12cced"]),
 }
 RESAMPLE_ALGS = {
     'continuous': 'bilinear',
@@ -102,7 +103,7 @@ def _figure_subplots(map_bbox, n_plots):
     sub_width = FIGURE_WIDTH / n_cols
     sub_height = (sub_width / xy_ratio) + 0.5  # in; expand vertically for title
     return plt.subplots(
-        n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height))
+        n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height), layout='constrained')
 
 
 def plot_choropleth(gdf, field_list):
@@ -138,16 +139,40 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
         transform_list = ['linear'] * n_plots
     for ax, tif, dtype, transform in zip(
             axes.flatten(), tif_list, datatype_list, transform_list):
+        arr, resampled = read_masked_array(tif, RESAMPLE_ALGS[dtype])
+        legend = False
+        imshow_kwargs = {}
+        colorbar_kwargs = {}
+        imshow_kwargs['norm'] = transform
+        imshow_kwargs['interpolation'] = 'none'
         cmap = COLORMAPS[dtype]
         if dtype == 'divergent':
             if transform == 'log':
                 transform = matplotlib.colors.SymLogNorm(linthresh=0.03)
             else:
                 transform = matplotlib.colors.CenteredNorm()
-        arr, resampled = read_masked_array(tif, RESAMPLE_ALGS[dtype])
-        mappable = ax.imshow(arr, cmap=cmap, norm=transform)
+            imshow_kwargs['norm'] = transform
+        if dtype == 'binary':
+            transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
+            imshow_kwargs['vmin'] = -0.5
+            imshow_kwargs['vmax'] = 1.5
+            colorbar_kwargs['ticks'] = [0, 1]
+        mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+        if dtype == 'nominal':
+            # typically a 'nominal' raster would be an int type, but we replaced
+            # nodata with nan, so the array is now a float.
+            values, counts = numpy.unique(arr[~numpy.isnan(arr)], return_counts=True)
+            values = values[numpy.argsort(-counts)].astype(int)  # descending order
+            colors = [mappable.cmap(mappable.norm(value)) for value in values]
+            patches = [matplotlib.patches.Patch(
+                color=colors[i], label=f'{values[i]}') for i in range(len(values))]
+            legend = True
         ax.set(title=f"{os.path.basename(tif)}{'*' if resampled else ''}")
-        fig.colorbar(mappable, ax=ax)
+        if legend:
+            leg = ax.legend(handles=patches, bbox_to_anchor=(1.02, 1), loc=2)
+            leg.set_in_layout(False)
+        else:
+            fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
 
