@@ -72,7 +72,7 @@ COLORMAPS = {
     'continuous': 'viridis',
     'divergent': 'BrBG',
     'nominal': 'tab20',
-    'binary': ListedColormap(["black", "white"]),
+    'binary': ListedColormap(["#3a3a3a", "#12cced"]),
 }
 RESAMPLE_ALGS = {
     'continuous': 'bilinear',
@@ -144,6 +144,7 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
         imshow_kwargs = {}
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
+        imshow_kwargs['interpolation'] = 'none'
         cmap = COLORMAPS[dtype]
         if dtype == 'divergent':
             if transform == 'log':
