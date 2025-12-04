@@ -1,116 +1,103 @@
+import json
+import logging
 import os
-import time
+import sys
 
-import geopandas
-from jinja2 import Environment, PackageLoader, select_autoescape
+from invest_reports import sdr_ndr_utils
+from invest_reports.jinja_report_generators import sdr_ndr_report_generator
+from invest_reports.utils import RasterPlotConfig, RasterPlotConfigGroup
 
-from natcap.invest import datastack
-from natcap.invest.ndr.ndr import MODEL_SPEC
+LOGGER = logging.getLogger(__name__)
 
-import invest_reports.utils
-from invest_reports.utils import RasterPlotConfig
-
-
-# Locate report template.
-env = Environment(
-    loader=PackageLoader('invest_reports', 'jinja_templates'),
-    autoescape=select_autoescape()
-)
-template = env.get_template('sdr-ndr-report.html')
-
-# Define basic info.
-model_spec = MODEL_SPEC
-model_id = model_spec.model_id
-timestamp = time.strftime('%Y-%m-%d %H:%M')
-# logfile_path = '/Users/eadavis/invest-workspaces/ndr/InVEST-ndr-log-2025-10-28--13_56_40.txt'
-logfile_path = '/Users/eadavis/invest-workspaces/ndr-luzon/InVEST-ndr-log-2025-10-29--14_12_04.txt'
-
-# Get args dict, workspace path, and suffix string.
-_, ds_info = datastack.get_datastack_info(logfile_path)
-args_dict = ds_info.args
-workspace = args_dict['workspace_dir']
-suffix_str = ''
-if 'results_suffix' in args_dict and args_dict['results_suffix'] != '':
-    suffix_str = ('_' + args_dict['results_suffix'])
-
-# Plot inputs.
-inputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters([
-    RasterPlotConfig(args_dict['dem_path'], 'continuous'),
-    RasterPlotConfig(args_dict['runoff_proxy_path'], 'continuous'),
-    RasterPlotConfig(args_dict['lulc_path'], 'nominal')
-])
-
-# Plot primary outputs.
-output_raster_plot_configs = []
-if args_dict['calc_n']:
-    output_raster_plot_configs.extend([
-        RasterPlotConfig(
-            os.path.join(workspace, f'n_surface_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-        RasterPlotConfig(
-            os.path.join(workspace, f'n_subsurface_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-        RasterPlotConfig(
-            os.path.join(workspace, f'n_total_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-    ])
-if args_dict['calc_p']:
-    output_raster_plot_configs.extend([
-        RasterPlotConfig(
-            os.path.join(workspace, f'p_surface_export{suffix_str}.tif'),
-            'continuous', 'linear'),
-    ])
-
-outputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
-    output_raster_plot_configs)
-
-# Plot relevant intermediate outputs.
-intermediate_raster_list = [
-    RasterPlotConfig(os.path.join(
-        workspace, 'intermediate_outputs',
-        f'masked_dem{suffix_str}.tif'), 'continuous'),
-    RasterPlotConfig(os.path.join(
-        workspace, 'intermediate_outputs',
-        f'what_drains_to_stream{suffix_str}.tif'), 'binary'),
+INPUT_RASTER_PLOT_TUPLES = [
+    ('dem_path', 'continuous'),
+    ('runoff_proxy_path', 'continuous'),
+    ('lulc_path', 'nominal')
 ]
 
-# Include stream map only if not computed using D8 (D8 streams are single-pixel wide and illegible at this scale).
-if args_dict['flow_dir_algorithm'] != 'D8':
-    intermediate_raster_list.append(RasterPlotConfig(
-        os.path.join(workspace, f'stream{suffix_str}.tif'), 'binary'))
+OUTPUT_RASTER_PLOT_TUPLES = {
+    'calc_n': [
+        ('n_surface_export', 'continuous', 'linear'),
+        ('n_subsurface_export', 'continuous', 'linear'),
+        ('n_total_export', 'continuous', 'linear'),
+    ],
+    'calc_p': [
+        ('p_surface_export', 'continuous', 'linear')
+    ],
+}
 
-stream_network_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
-    intermediate_raster_list)
+INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
+    ('masked_dem', 'continuous'),
+    ('what_drains_to_stream', 'binary'),
+]
 
-# Generate HTML representation of attribute table from watershed results vector.
-watershed_results_vector_path = os.path.join(
-    workspace, f'watershed_results_ndr{suffix_str}.gpkg')
-ws_vector = geopandas.read_file(watershed_results_vector_path)
-ws_vector_table = ws_vector.drop(columns=['geometry']).to_html(
-    index=False, na_rep='')
 
-# Generate tables of raster summary stats
-output_raster_stats_table = invest_reports.utils.raster_workspace_summary(
-    workspace).to_html(na_rep='')
-input_raster_stats_table = invest_reports.utils.raster_inputs_summary(
-    args_dict).to_html(na_rep='')
+def _build_output_raster_plot_configs(args_dict, file_registry):
+    output_raster_plot_tuples = []
+    if args_dict['calc_n']:
+        output_raster_plot_tuples.extend(
+            OUTPUT_RASTER_PLOT_TUPLES['calc_n'])
+    if args_dict['calc_p']:
+        output_raster_plot_tuples.extend(
+            OUTPUT_RASTER_PLOT_TUPLES['calc_p'])
+    return [
+        RasterPlotConfig(file_registry[output_id], datatype, transform)
+        for (output_id, datatype, transform) in output_raster_plot_tuples]
 
-# Generate HTML document.
-with open(os.path.join(workspace, f'{model_id}{suffix_str}.html'),
-          'w', encoding='utf-8') as target_file:
-    target_file.write(template.render(
-        model_id=model_id,
-        model_name=model_spec.model_title,
-        userguide_page=model_spec.userguide,
-        timestamp=timestamp,
-        args_dict=args_dict,
-        inputs_img_src=inputs_img_src,
-        outputs_img_src=outputs_img_src,
-        intermediate_outputs_heading='Stream Network Maps',
-        intermediate_outputs_img_src=stream_network_img_src,
-        ws_vector_table=ws_vector_table,
-        output_raster_stats_table=output_raster_stats_table,
-        input_raster_stats_table=input_raster_stats_table,
-        model_spec_outputs=model_spec.outputs,
-        accordions_open_on_load=True,
-    ))
+
+def report(file_registry, args_dict, model_spec, target_html_filepath):
+    """Generate an HTML summary of model results.
+
+    Args:
+        file_registry (dict): The ``natcap.invest.FileRegistry.registry``
+            that was returned by the model's ``execute`` method.
+        args_dict (dict): The arguments that were passed to the model's
+            ``execute`` method.
+        model_spec (natcap.invest.spec.ModelSpec): the model's ``MODEL_SPEC``.
+        target_html_filepath (str): path to an HTML file to be generated by
+            this function.
+
+    Returns:
+        ``None``
+    """
+
+    input_raster_plot_configs = sdr_ndr_utils.build_input_raster_plot_configs(
+        args_dict, INPUT_RASTER_PLOT_TUPLES)
+
+    output_raster_plot_configs = _build_output_raster_plot_configs(
+        args_dict, file_registry)
+
+    intermediate_raster_plot_configs = sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
+        args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
+
+    raster_plot_configs = RasterPlotConfigGroup(
+        input_raster_plot_configs,
+        output_raster_plot_configs,
+        intermediate_raster_plot_configs)
+
+    sdr_ndr_report_generator.report(
+        file_registry, args_dict, model_spec, target_html_filepath,
+        raster_plot_configs)
+
+
+# @TODO: remove this block for InVEST Workbench integration
+if __name__ == '__main__':
+    from natcap.invest.ndr.ndr import MODEL_SPEC
+    import natcap.invest.datastack
+    handler = logging.StreamHandler(sys.stdout)
+    logging.basicConfig(level=logging.INFO, handlers=[handler])
+    logfile_path = '/Users/eadavis/invest-workspaces/ndr/InVEST-ndr-log-2025-12-01--15_34_31.txt'
+    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
+    args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
+    file_registry_path = os.path.join(
+        args_dict['workspace_dir'],
+        f'file_registry{args_dict['results_suffix']}.json')
+
+    with open(file_registry_path, 'r') as file:
+        file_registry = json.loads(file.read())
+
+    target_filepath = os.path.join(
+        args_dict['workspace_dir'],
+        f'{MODEL_SPEC.model_id.lower()}_report{args_dict['results_suffix']}.html')
+
+    report(file_registry, args_dict, MODEL_SPEC, target_filepath)

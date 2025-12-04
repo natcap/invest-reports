@@ -5,6 +5,7 @@
   {{ super() }}
 
   {% from 'args-table.html' import args_table with context %}
+  {% from 'content-grid.html' import content_grid %}
   {% from 'metadata.html' import list_metadata %}
   {% from 'raster-plot-img.html' import raster_plot_img %}
   {% from 'wide-table.html' import wide_table %}
@@ -31,7 +32,13 @@
 
   {{ accordion_section(
     'Output Raster Stats',
-    output_raster_stats_table | safe,
+    content_grid([
+      (stats_table_note | safe, 100),
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
   )}}
 
   <h2 class="section-header">Inputs</h2>
@@ -48,7 +55,13 @@
 
   {{ accordion_section(
     'Input Raster Stats',
-    input_raster_stats_table | safe,
+    content_grid([
+      (stats_table_note | safe, 100),
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
+    ])
   )}}
 
   <h2 class="section-header">Metadata</h2>
