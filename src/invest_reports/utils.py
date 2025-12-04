@@ -325,11 +325,16 @@ STATS_LIST = [
 
 
 def _build_stats_table_row(resource, band):
-    # @TODO: use scientific notation for values with many (how many?) digits
-    # pandas.set_option('display.float_format', '{:.2E}'.format)
+    # Python "general" format limits precision (default: 6 significant digits)
+    # and uses scientific notation where appropriate.
+    pandas.set_option('display.float_format', '{:G}'.format)
     row = {}
     for (stat_key, display_name) in STATS_LIST:
-        row[display_name] = band.gdal_metadata.get(stat_key) or 'unknown'
+        stat_val = band.gdal_metadata.get(stat_key)
+        if stat_val:
+            row[display_name] = float(stat_val)
+        else:
+            row[display_name] = 'unknown'
     (width, height) = (
         resource.data_model.raster_size['width'],
         resource.data_model.raster_size['height'])
