@@ -34,7 +34,10 @@
     'Output Raster Stats',
     content_grid([
       (stats_table_note | safe, 100),
-      (wide_table(output_raster_stats_table | safe), 100)
+      (wide_table(
+        output_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
     ])
   )}}
 
@@ -54,7 +57,10 @@
     'Input Raster Stats',
     content_grid([
       (stats_table_note | safe, 100),
-      (wide_table(input_raster_stats_table | safe), 100)
+      (wide_table(
+        input_raster_stats_table | safe,
+        font_size_px=16
+      ), 100)
     ])
   )}}
 
