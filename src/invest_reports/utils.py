@@ -30,6 +30,12 @@ from osgeo import gdal
 #   savefig with tight bbox layout shrinks the figure after it is sized
 FIGURE_WIDTH = 14.5  # inches; by trial & error
 
+# Globally set the float format used in DataFrames and resulting HTML tables.
+# G indicates Python "general" format, which limits precision
+# (default: 6 significant digits), drops trailing zeros,
+# and uses scientific notation where appropriate.
+pandas.set_option('display.float_format', '{:G}'.format)
+
 
 class RasterPlotConfig:
     def __init__(self,
@@ -325,9 +331,6 @@ STATS_LIST = [
 
 
 def _build_stats_table_row(resource, band):
-    # Python "general" format limits precision (default: 6 significant digits)
-    # and uses scientific notation where appropriate.
-    pandas.set_option('display.float_format', '{:G}'.format)
     row = {}
     for (stat_key, display_name) in STATS_LIST:
         stat_val = band.gdal_metadata.get(stat_key)
