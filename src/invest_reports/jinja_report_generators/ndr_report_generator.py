@@ -3,14 +3,11 @@ import logging
 import os
 import sys
 
-from invest_reports import jinja_env
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
 from invest_reports.utils import RasterPlotConfig, RasterPlotConfigGroup
 
 LOGGER = logging.getLogger(__name__)
-
-TEMPLATE = jinja_env.get_template('sdr-ndr-report.html')
 
 INPUT_RASTER_PLOT_TUPLES = [
     ('dem_path', 'continuous'),
