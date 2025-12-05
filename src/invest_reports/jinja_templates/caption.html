@@ -1,0 +1,20 @@
+<!--
+  `text` can be a string or a sequence of strings.
+  `source_list` should be a list of strings
+-->
+
+{% macro caption(text, source_list=None) -%}
+  {% if text is string %}
+    {% set text = [text] %}
+  {% endif %}
+  <div class="caption">
+    {% for paragraph in text %}
+      <p>{{ paragraph }}</p>
+    {% endfor %}
+    {% if source_list %}
+      <p class="sources">
+        Sources: {{ source_list | join('; ') }}
+      </p>
+    {% endif %}
+  </div>
+{%- endmacro %}

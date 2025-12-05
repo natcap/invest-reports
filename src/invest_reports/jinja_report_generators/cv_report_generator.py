@@ -1,14 +1,14 @@
-import json
 import logging
 import os
-import sys
 import time
 
 import altair
 import geopandas
 import pandas
 
+import natcap.invest.spec
 from invest_reports import jinja_env
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -40,7 +40,11 @@ legend_config = {
     'labelFontSize': 14,
     'titleFontSize': 14,
     'orient': 'left',
-    'gradientLength': 100
+    'gradientLength': 120
+}
+axis_config = {
+    'labelFontSize': 12,
+    'titleFontSize': 12,
 }
 
 
@@ -91,25 +95,6 @@ def chart_base_points(geodataframe):
     return base_points
 
 
-def chart_wave_energy(wave_energy_geodf, energy_units):
-    base_points = chart_base_points(wave_energy_geodf)
-
-    points = base_points.mark_circle(
-        filled=point_fill,
-        strokeWidth=stroke_width,
-    ).encode(
-        color=altair.Color(
-            'max_E_type:N',
-            legend=altair.Legend(title='dominant wave type')
-        ),
-        size=altair.Size(
-            'wave',
-            legend=altair.Legend(title=f'wave energy\n ({energy_units})'))
-    )
-
-    return points
-
-
 def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
     habitat_df = pandas.read_csv(habitat_protection_csv)
     habitat_geodf = exposure_geodf[['shore_id', 'geometry', 'habitat_role']].join(
@@ -124,27 +109,22 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
         return ','.join(hab_list)
     habitat_geodf['hab_presence'] = habitat_geodf.apply(concat_habitats, axis=1)
 
-    habitat_radio = altair.binding_radio(
-        options=['All'] + list(habitats),
-        labels=['All'] + list(habitats),
-        name='Show points protected by each habitat:'
-    )
-    hab_param = altair.param(value='All', bind=habitat_radio)
-
     habitat_base_points = chart_base_points(habitat_geodf)
-
-    habitat_points = habitat_base_points.add_params(
-        hab_param
-    ).transform_filter(
-        (hab_param == 'All') |
-        altair.expr.test(hab_param, altair.datum.hab_presence)
-    ).mark_circle(
+    habitat_points = habitat_base_points.mark_circle(
         filled=point_fill,
         strokeWidth=stroke_width,
         size=point_size
     ).encode(
         color=altair.Color('habitat_role').scale(scheme='viridis', reverse=True),
-        tooltip=altair.Tooltip(list(habitats), format='.2f')
+        tooltip=[
+            {
+                'field': 'habitat_role',
+                'format': '.2f'
+            },
+            {
+                'field': 'hab_presence'
+            }
+        ]
     )
 
     _, xy_ratio = get_geojson_bbox(exposure_geodf)
@@ -153,7 +133,7 @@ def chart_habitat_map(habitat_protection_csv, exposure_geodf, landmass_chart):
         width=map_width,
         height=map_width / xy_ratio,
         title='The role of habitat in reducing coastal exposure'
-    ).configure_legend(**legend_config)
+    ).configure_legend(**legend_config).configure_axis(**axis_config)
     return habitat_map
 
 
@@ -197,12 +177,17 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         # If population is missing we still want to plot the point.
         exposure_geo.population = exposure_geo.population.fillna(-1)
         tooltip_vars.append('population')
-        population_checkbox = altair.binding_checkbox(name='scale by population')
-        scale_population = altair.param(value=True, bind=population_checkbox)
+        population_spec = model_spec.get_output(
+            'coastal_exposure').get_field('population')
+        population_checkbox = altair.binding_checkbox(
+            name=f'scale by population ({natcap.invest.spec.format_unit(
+                population_spec.units)})')
+        scale_population = altair.param(value=False, bind=population_checkbox)
+        population_caption = population_spec.about + """
+             '-1' represents no valid population data within the search radius
+            around a point."""
 
     tooltip = altair.Tooltip(tooltip_vars, format='.2f')
-    null_checkbox = altair.binding_checkbox(name='show null')
-    show_null = altair.param(value=False, bind=null_checkbox)
 
     point_size_conditional = altair.condition(
         scale_population,
@@ -218,42 +203,66 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         size=point_size_conditional,
         color=altair.Color(
             'exposure',
-            legend=altair.Legend(title='exposure')
-        ).scale(scheme='plasma', reverse=True).bin(maxbins=4),
+            legend=altair.Legend(
+                title='exposure', 
+                values=[1, 2, 3, 4, 5],  # force these values and labels
+                labelExpr="datum.value",  # value refers to the list above.
+            )
+        ).scale(scheme='plasma', reverse=True).bin(extent=[1.0, 5.0]),
         tooltip=tooltip
     ).add_params(scale_population)
 
-    null_points_chart = base_points.add_params(
-        show_null
-    ).transform_filter(
-        show_null & ~altair.expr.isValid(altair.datum.exposure)
-    ).mark_circle(
-        filled=point_fill,
-        strokeWidth=stroke_width,
-        color='gray',
-        invalid='show'
-    ).encode(
-        size=point_size_conditional,
-        tooltip=tooltip
-    ).add_params(scale_population)
+    na_count = exposure_geo.exposure.isna().sum()
+    if na_count:
+        null_checkbox = altair.binding_checkbox(
+            name=f'{na_count} point(s) missing the exposure index. Show:')
+        show_null = altair.param(value=False, bind=null_checkbox)
+        null_points_chart = base_points.add_params(
+            show_null
+        ).transform_filter(
+            show_null & ~altair.expr.isValid(altair.datum.exposure)
+        ).mark_point(
+            shape='M-1, -1, L1, 1, M-1, 1, L1, -1',  # an X
+            stroke='black',
+            strokeWidth=1.5,
+            invalid='show',
+            size=36,
+        ).encode(
+            tooltip=tooltip
+        )
+        exposure_map = landmass_chart + null_points_chart + exposure_points_chart
+    else:
+        exposure_map = landmass_chart + exposure_points_chart
 
-    exposure_map = landmass_chart + null_points_chart + exposure_points_chart
     exposure_map = exposure_map.properties(
         width=map_width,
         height=map_width / xy_ratio,
         title='coastal exposure'
     ).configure_legend(**legend_config)
     exposure_map_json = exposure_map.to_json()
+    exposure_map_caption = [model_spec.get_output(
+        'coastal_exposure').get_field('exposure').about]
+    if population_caption:
+        exposure_map_caption.append(population_caption)
+    exposure_map_source_list = [
+        model_spec.get_output('coastal_exposure').path,
+        model_spec.get_output('clipped_projected_landmass').path]
 
     habitat_map = chart_habitat_map(
         file_registry['habitat_protection'],
         exposure_geo,
         landmass_chart)
     habitat_map_json = habitat_map.to_json()
+    habitat_map_caption = model_spec.get_output(
+        'coastal_exposure').get_field('habitat_role').about
+    habitat_map_source_list = [
+        model_spec.get_output('coastal_exposure').path,
+        model_spec.get_output('habitat_protection').path]
 
     habitat_params_df = pandas.read_csv(args_dict['habitat_table_path'])
-    habitat_table_description = f'Rank = {model_spec.get_input(
+    habitat_table_caption = f'Rank = {model_spec.get_input(
         'habitat_table_path').get_column('rank').about}'
+    habitat_table_source_list = [args_dict['habitat_table_path']]
 
     exposure_histogram = altair.Chart(exposure_geo).mark_bar().encode(
         x=altair.X('exposure', title='coastal exposure').bin(step=0.2),
@@ -265,7 +274,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     ).properties(
         width=map_width,
         height=200
-    )
+    ).configure_axis(**axis_config)
     exposure_histogram_json = exposure_histogram.to_json()
 
     base_rank_vars_chart = base_points.mark_circle(
@@ -289,36 +298,73 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     rank_vars_figure = altair.vconcat(
         altair.hconcat(*rank_vars_chart_list[:n_cols]),
         altair.hconcat(*rank_vars_chart_list[n_cols:])
-    )
+    ).configure_axis(**axis_config)
     rank_vars_figure_json = rank_vars_figure.to_json()
+    rank_vars_figure_caption = \
+        """
+        These variables are the individual components of the coastal exposure index.
+        The exposure index is calculated as the geometric mean of these variables.
+        If a shore point is missing data about one of these variables, then the
+        exposure index will also be missing at that point.
+        """
+    rank_vars_figure_source_list = [model_spec.get_output('coastal_exposure').path]
 
+    csv_spec = model_spec.get_output('intermediate_exposure_csv')
     intermediate_vars = ['relief', 'wind', 'wave', 'surge']
+    units = [natcap.invest.spec.format_unit(csv_spec.get_column(var).units)
+             for var in intermediate_vars]
+    renamed_vars = [f'{var} {u}'
+                    for var, u in zip(intermediate_vars, units)]
     intermediate_df = pandas.read_csv(file_registry['intermediate_exposure_csv'])
-    facetted_histograms = altair.Chart(intermediate_df).mark_bar().encode(
-        altair.X(
-            altair.repeat('column'),
-            type='quantitative',
-            bin=altair.Bin(nice=True)),
-        y='count()'
-    ).properties(
-        width=map_width // 2
-    ).repeat(
-        column=intermediate_vars,
-    )
+    variable_label_lookup = {var: new_var for var, new_var 
+                             in zip(intermediate_vars, renamed_vars)}
+    intermediate_df.rename(
+        columns=variable_label_lookup, inplace=True)
+    histograms = []
+    for i, var in enumerate(renamed_vars):
+        # remove redundant axis titles
+        title = 'Count of Records' if i == 0 else None
+        hist = altair.Chart(intermediate_df).mark_bar().encode(
+            altair.X(
+                var,
+                type='quantitative',
+                bin=altair.Bin(nice=True)),
+            y=altair.Y('count()', title=title)
+        ).properties(
+            width=map_width // 2
+        )
+        histograms.append(hist)
+    facetted_histograms = altair.hconcat(
+        *histograms).configure_axis(**axis_config)
     facetted_histograms_json = facetted_histograms.to_json()
+    facetted_histograms_caption = model_spec.get_output(
+        'intermediate_exposure').about
+    facetted_histograms_source_list = [model_spec.get_output(
+        'intermediate_exposure').path]
 
     wave_energy_geo = geopandas.read_file(file_registry['wave_energies'])
-    # https://github.com/natcap/invest/issues/2216
-    # energy_units = natcap.invest.spec.format_unit(
-    #     model_spec.get_output('wave_energies').get_field('E_ocean').units)
-    # https://github.com/natcap/invest/issues/2217
-    # energy_units = geometamaker.describe(
-    #     file_registry['wave_energies']).get_field_description('E_ocean').units
-    energy_units = 'kW/meter'
+    wave_var = variable_label_lookup['wave']
     wave_energy_geo = wave_energy_geo.join(
-        intermediate_df[['shore_id', 'wave']].set_index('shore_id'), on='shore_id')
+        intermediate_df[['shore_id', wave_var]].set_index(
+            'shore_id'), on='shore_id')
+    wave_checkbox = altair.binding_checkbox(name='scale by wave energy')
+    scale_wave = altair.param(value=False, bind=wave_checkbox)
+    point_size_conditional = altair.condition(
+        scale_wave,
+        f'{wave_var}:Q',
+        altair.value(point_size))
 
-    wave_points_chart = chart_wave_energy(wave_energy_geo, energy_units)
+    base_wave_points = chart_base_points(wave_energy_geo)
+    wave_points_chart = base_wave_points.mark_circle(
+        filled=point_fill,
+        strokeWidth=stroke_width,
+    ).encode(
+        color=altair.Color(
+            'max_E_type:N',
+            legend=altair.Legend(title='dominant wave type')
+        ),
+        size=point_size_conditional
+    ).add_params(scale_wave)
     wave_energy_map = landmass_chart + wave_points_chart
     wave_energy_map = wave_energy_map.properties(
         width=map_width + 30,  # extra space for legend
@@ -326,6 +372,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         title='local wind-driven waves vs. open ocean waves'
     ).configure_legend(**legend_config)
     wave_energy_map_json = wave_energy_map.to_json()
+
+    wave_energy_map_caption = [model_spec.get_output(
+        'wave_energies').about]
+    wave_energy_map_caption.append(
+        model_spec.get_input('max_fetch_distance').about)
+    wave_energy_map_source_list = [
+        model_spec.get_output('wave_energies').path,
+        model_spec.get_output('intermediate_exposure').path]
 
     # later this may be in model_spec
     model_description = \
@@ -351,36 +405,25 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             userguide_page=model_spec.userguide,
             args_dict=args_dict,
             exposure_map_json=exposure_map_json,
+            exposure_map_caption=exposure_map_caption,
+            exposure_map_source_list=exposure_map_source_list,
             habitat_map_json=habitat_map_json,
+            habitat_map_caption=habitat_map_caption,
+            habitat_map_source_list=habitat_map_source_list,
             habitat_params_table=habitat_params_df.to_html(),
-            habitat_table_description=habitat_table_description,
+            habitat_table_caption=habitat_table_caption,
+            habitat_table_source_list=habitat_table_source_list,
             exposure_histogram_json=exposure_histogram_json,
             facetted_histograms_json=facetted_histograms_json,
+            facetted_histograms_caption=facetted_histograms_caption,
+            facetted_histograms_source_list=facetted_histograms_source_list,
             rank_vars_figure_json=rank_vars_figure_json,
+            rank_vars_figure_caption=rank_vars_figure_caption,
+            rank_vars_figure_source_list=rank_vars_figure_source_list,
             wave_energy_map_json=wave_energy_map_json,
+            wave_energy_map_caption=wave_energy_map_caption,
+            wave_energy_map_source_list=wave_energy_map_source_list,
             model_spec_outputs=model_spec.outputs,
             accordions_open_on_load=True,
         ))
     LOGGER.info(f'Created {target_html_filepath}')
-
-
-if __name__ == '__main__':
-    from natcap.invest.coastal_vulnerability import MODEL_SPEC
-    import natcap.invest.datastack
-    handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
-    # logfile_path = 'C:/Users/dmf/projects/forum/cv/mar/sample_200m_12k_fetch/InVEST-coastal_vulnerability-log-2025-10-03--11_55_19.txt'
-    logfile_path = 'C:/Users/dmf/projects/forum/cv/sampledata/InVEST-coastal_vulnerability-log-2025-10-07--16_11_00.txt'
-    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
-    args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
-    file_registry_path = os.path.join(
-        args_dict['workspace_dir'],
-        f'file_registry{args_dict['results_suffix']}.json')
-
-    with open(file_registry_path, 'r') as file:
-        file_registry = json.loads(file.read())
-
-    target_filepath = os.path.join(
-        args_dict['workspace_dir'],
-        f'{MODEL_SPEC.model_id.lower()}_report{args_dict['results_suffix']}.html')
-    report(file_registry, args_dict, MODEL_SPEC, target_filepath)
