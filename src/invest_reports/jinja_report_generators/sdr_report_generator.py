@@ -61,9 +61,13 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         output_raster_plot_configs,
         intermediate_raster_plot_configs)
 
+    results_vector_id = 'watershed_results_sdr'
+    results_vector_cols_to_sum = [
+        'usle_tot', 'sed_export', 'sed_dep', 'avoid_exp', 'avoid_eros']
+
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs)
+        raster_plot_configs, results_vector_id, results_vector_cols_to_sum)
 
 
 # @TODO: remove this block for InVEST Workbench integration
