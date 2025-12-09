@@ -79,25 +79,3 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         file_registry, args_dict, model_spec, target_html_filepath,
         raster_plot_configs)
 
-
-# @TODO: remove this block for InVEST Workbench integration
-if __name__ == '__main__':
-    from natcap.invest.ndr.ndr import MODEL_SPEC
-    import natcap.invest.datastack
-    handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
-    logfile_path = '/Users/eadavis/invest-workspaces/ndr/InVEST-ndr-log-2025-12-01--15_34_31.txt'
-    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
-    args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
-    file_registry_path = os.path.join(
-        args_dict['workspace_dir'],
-        f'file_registry{args_dict['results_suffix']}.json')
-
-    with open(file_registry_path, 'r') as file:
-        file_registry = json.loads(file.read())
-
-    target_filepath = os.path.join(
-        args_dict['workspace_dir'],
-        f'{MODEL_SPEC.model_id.lower()}_report{args_dict['results_suffix']}.html')
-
-    report(file_registry, args_dict, MODEL_SPEC, target_filepath)
