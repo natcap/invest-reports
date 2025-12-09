@@ -180,8 +180,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         population_spec = model_spec.get_output(
             'coastal_exposure').get_field('population')
         population_checkbox = altair.binding_checkbox(
-            name=f'scale by population ({natcap.invest.spec.format_unit(
-                population_spec.units)})')
+            name=f'scale by population ({natcap.invest.spec.format_unit(population_spec.units)})')
         scale_population = altair.param(value=False, bind=population_checkbox)
         population_caption = population_spec.about + """
              '-1' represents no valid population data within the search radius
@@ -260,8 +259,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         model_spec.get_output('habitat_protection').path]
 
     habitat_params_df = pandas.read_csv(args_dict['habitat_table_path'])
-    habitat_table_caption = f'Rank = {model_spec.get_input(
-        'habitat_table_path').get_column('rank').about}'
+    about_habitat_rank = model_spec.get_input(
+        'habitat_table_path').get_column('rank').about
+    habitat_table_caption = f'Rank = {about_habitat_rank}'
     habitat_table_source_list = [args_dict['habitat_table_path']]
 
     exposure_histogram = altair.Chart(exposure_geo).mark_bar().encode(
