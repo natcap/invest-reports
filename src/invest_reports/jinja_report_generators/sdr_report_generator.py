@@ -1,13 +1,6 @@
-import json
-import logging
-import os
-import sys
-
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
 from invest_reports.utils import RasterPlotConfigGroup
-
-LOGGER = logging.getLogger(__name__)
 
 INPUT_RASTER_PLOT_TUPLES = [
     ('dem_path', 'continuous'),
@@ -68,26 +61,3 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
         raster_plot_configs, results_vector_id, results_vector_cols_to_sum)
-
-
-# @TODO: remove this block for InVEST Workbench integration
-if __name__ == '__main__':
-    from natcap.invest.sdr.sdr import MODEL_SPEC
-    import natcap.invest.datastack
-    handler = logging.StreamHandler(sys.stdout)
-    logging.basicConfig(level=logging.INFO, handlers=[handler])
-    logfile_path = '/Users/eadavis/invest-workspaces/sdr/InVEST-sdr-log-2025-10-29--15_26_12.txt'
-    _, ds_info = natcap.invest.datastack.get_datastack_info(logfile_path)
-    args_dict = MODEL_SPEC.preprocess_inputs(ds_info.args)
-    file_registry_path = os.path.join(
-        args_dict['workspace_dir'],
-        f'file_registry{args_dict['results_suffix']}.json')
-
-    with open(file_registry_path, 'r') as file:
-        file_registry = json.loads(file.read())
-
-    target_filepath = os.path.join(
-        args_dict['workspace_dir'],
-        f'{MODEL_SPEC.model_id.lower()}_report{args_dict['results_suffix']}.html')
-
-    report(file_registry, args_dict, MODEL_SPEC, target_filepath)

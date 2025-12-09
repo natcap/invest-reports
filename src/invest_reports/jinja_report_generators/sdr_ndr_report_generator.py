@@ -4,9 +4,7 @@
 import logging
 import time
 
-import invest_reports.utils
-from invest_reports import jinja_env
-from invest_reports import sdr_ndr_utils
+from invest_reports import jinja_env, sdr_ndr_utils, utils
 from invest_reports.utils import RasterPlotConfigGroup
 
 LOGGER = logging.getLogger(__name__)
@@ -38,22 +36,23 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
         ``None``
     """
 
-    inputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
+    inputs_img_src = utils.plot_and_base64_encode_rasters(
         raster_plot_configs.inputs)
 
-    outputs_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
+    outputs_img_src = utils.plot_and_base64_encode_rasters(
         raster_plot_configs.outputs)
 
-    intermediate_img_src = invest_reports.utils.plot_and_base64_encode_rasters(
+    intermediate_img_src = utils.plot_and_base64_encode_rasters(
         raster_plot_configs.intermediates)
 
-    (ws_vector_table, ws_vector_totals_table) = sdr_ndr_utils.generate_results_table_from_vector(
-        file_registry[results_vector_id], results_vector_cols_to_sum)
+    (ws_vector_table, ws_vector_totals_table) = (
+        sdr_ndr_utils.generate_results_table_from_vector(
+            file_registry[results_vector_id], results_vector_cols_to_sum))
 
-    output_raster_stats_table = invest_reports.utils.raster_workspace_summary(
+    output_raster_stats_table = utils.raster_workspace_summary(
         args_dict['workspace_dir']).to_html(na_rep='')
 
-    input_raster_stats_table = invest_reports.utils.raster_inputs_summary(
+    input_raster_stats_table = utils.raster_inputs_summary(
         args_dict).to_html(na_rep='')
 
     stats_table_note = (
@@ -82,3 +81,5 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             model_spec_outputs=model_spec.outputs,
             accordions_open_on_load=True,
         ))
+
+    LOGGER.info(f'Created {target_html_filepath}')
