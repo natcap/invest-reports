@@ -338,15 +338,15 @@ def _build_stats_table_row(resource, band):
     row = {}
     for (stat_key, display_name) in STATS_LIST:
         stat_val = band.gdal_metadata.get(stat_key)
-        if stat_val:
+        if stat_val is not None:
             row[display_name] = float(stat_val)
         else:
             row[display_name] = 'unknown'
     (width, height) = (
         resource.data_model.raster_size['width'],
         resource.data_model.raster_size['height'])
-    row['Count'] = (width * height) or 'unknown'
-    row['Nodata value'] = band.nodata or 'unknown'
+    row['Count'] = width * height
+    row['Nodata value'] = band.nodata
     # band.units may be '', which can mean 'unitless', 'unknown', or 'other'
     # @TODO: standardize string representations to help distinguish between
     # 'unitless', 'other/multiple/it depends', and truly 'unknown'
