@@ -17,7 +17,7 @@
 
   <h2 class="section-header">Results</h2>
 
-  {% if ws_vector_totals_table %}
+  {% if ws_vector_totals_table is defined and ws_vector_totals_table != None %}
     {% set watershed_results = content_grid([
       (wide_table(
         ws_vector_table | safe,
