@@ -63,10 +63,12 @@
 
   <h2 class="section-header">Inputs</h2>
 
-  {{ accordion_section(
-    'Arguments',
-    args_table()
-  )}}
+  {% if args_dict is defined and args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table()
+    )}}
+  {% endif %}
 
   {{ accordion_section(
     'Raster Inputs',
