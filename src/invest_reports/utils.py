@@ -1,4 +1,6 @@
 import base64
+import collections
+import logging
 import math
 import os
 from io import BytesIO
@@ -13,6 +15,8 @@ import pandas
 import yaml
 from osgeo import gdal
 
+
+LOGGER = logging.getLogger(__name__)
 
 # MATPLOTLIB_PARAMS = {
 #     'legend.fontsize': 'small',
@@ -350,22 +354,33 @@ def _build_stats_table_row(resource, band):
     return row
 
 
-def raster_workspace_summary(workspace):
+# @TODO tests for this function could use the same setup
+# as invest's test_spec.py:TestMetadataFromSpec.
+# @TODO This function's recursion through a file registry is duplicated in
+# invest's metadata-generating function. We may want a FileRegistry.walk method,
+# or similar.
+def raster_workspace_summary(file_registry):
     raster_summary = {}
-    for path, dirs, files in os.walk(workspace):
-        for file in files:
-            if file.endswith('.yml'):
-                filepath = os.path.join(path, file)
-                try:
-                    resource = geometamaker_load(filepath)
-                except Exception as err:
-                    print(filepath)
-                    raise err
-                if isinstance(resource, geometamaker.models.RasterResource):
-                    filename = os.path.basename(resource.path)
-                    band = resource.get_band_description(1)
-                    raster_summary[filename] = _build_stats_table_row(
-                        resource, band)
+
+    def _get_raster_metadata(filepath):
+        if isinstance(filepath, collections.abc.Mapping):
+            for k, v in filepath.items():
+                _get_raster_metadata(v)
+        else:
+            try:
+                resource = geometamaker_load(f'{filepath}.yml')
+            except (FileNotFoundError, ValueError) as err:
+                LOGGER.debug(err)
+                return
+            if isinstance(resource, geometamaker.models.RasterResource):
+                filename = os.path.basename(filepath)
+                band = resource.get_band_description(1)
+                raster_summary[filename] = _build_stats_table_row(
+                    resource, band)
+
+    for key, value in file_registry.items():
+        _get_raster_metadata(value)
+
     return pandas.DataFrame(raster_summary).T
 
 
