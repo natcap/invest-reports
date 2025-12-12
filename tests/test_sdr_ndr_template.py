@@ -34,7 +34,6 @@ def _get_render_args(model_spec):
         'input_raster_stats_table': input_stats_table,
         'stats_table_note': stats_table_note,
         'model_spec_outputs': model_spec.outputs,
-        'accordions_open_on_load': True,
     }
 
 
@@ -96,7 +95,6 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             input_raster_stats_table='',
             stats_table_note='',
             model_spec_outputs=[],
-            accordions_open_on_load=True,
         )
 
         root = lxml.html.document_fromstring(html)
@@ -135,7 +133,6 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             input_raster_stats_table='',
             stats_table_note='',
             model_spec_outputs=[],
-            accordions_open_on_load=True,
         )
 
         root = lxml.html.document_fromstring(html)
