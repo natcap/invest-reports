@@ -1,5 +1,10 @@
 {% extends 'base.html' %}
 
+{% block styles %}
+  {{ super() }}
+  {% include 'datatable-styles.html' %}
+{% endblock styles %}
+
 {% block content %}
 
   {{ super() }}
@@ -12,28 +17,43 @@
 
   <h2 class="section-header">Results</h2>
 
-  {{ accordion_section(
-    'Results by Watershed',
-    wide_table(
+  {% if ws_vector_totals_table is defined and ws_vector_totals_table != None %}
+    {% set watershed_results = content_grid([
+      (wide_table(
+        ws_vector_table | safe,
+        font_size_px=15
+      ), 100),
+      (wide_table(
+        ws_vector_totals_table | safe,
+        font_size_px=15
+      ), 100),
+    ]) %}
+  {% else %}
+    {% set watershed_results = wide_table(
       ws_vector_table | safe,
       font_size_px=15
-    ),
+    ) %}
+  {% endif %}
+
+  {{ accordion_section(
+    'Results by Watershed',
+    watershed_results
   )}}
 
   {{ accordion_section(
     'Primary Outputs',
-    raster_plot_img(outputs_img_src, 'Primary Outputs'),
+    raster_plot_img(outputs_img_src, 'Primary Outputs')
   )}}
 
   {{ accordion_section(
     intermediate_outputs_heading,
-    raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading),
+    raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading)
   )}}
 
   {{ accordion_section(
     'Output Raster Stats',
     content_grid([
-      (stats_table_note | safe, 100),
+      (stats_table_note, 100),
       (wide_table(
         output_raster_stats_table | safe,
         font_size_px=16
@@ -43,20 +63,22 @@
 
   <h2 class="section-header">Inputs</h2>
 
-  {{ accordion_section(
-    'Arguments',
-    args_table(),
-  )}}
+  {% if args_dict is defined and args_dict != None %}
+    {{ accordion_section(
+      'Arguments',
+      args_table()
+    )}}
+  {% endif %}
 
   {{ accordion_section(
     'Raster Inputs',
-    raster_plot_img(inputs_img_src, 'Raster Inputs'),
+    raster_plot_img(inputs_img_src, 'Raster Inputs')
   )}}
 
   {{ accordion_section(
     'Input Raster Stats',
     content_grid([
-      (stats_table_note | safe, 100),
+      (stats_table_note, 100),
       (wide_table(
         input_raster_stats_table | safe,
         font_size_px=16
@@ -73,5 +95,9 @@
     )
   }}
 
-
 {% endblock content %}
+
+{% block scripts %}
+  {{ super() }}
+  {% include 'datatable-js.html' %}
+{% endblock scripts %}
