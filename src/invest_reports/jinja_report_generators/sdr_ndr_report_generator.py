@@ -50,7 +50,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             file_registry[results_vector_id], results_vector_cols_to_sum))
 
     output_raster_stats_table = utils.raster_workspace_summary(
-        args_dict['workspace_dir']).to_html(na_rep='')
+        file_registry).to_html(na_rep='')
 
     input_raster_stats_table = utils.raster_inputs_summary(
         args_dict).to_html(na_rep='')
