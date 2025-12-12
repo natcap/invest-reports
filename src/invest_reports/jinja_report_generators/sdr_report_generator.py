@@ -1,13 +1,6 @@
-import json
-import logging
-import os
-import sys
-
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
 from invest_reports.utils import RasterPlotConfigGroup
-
-LOGGER = logging.getLogger(__name__)
 
 INPUT_RASTER_PLOT_TUPLES = [
     ('dem_path', 'continuous'),
@@ -50,17 +43,23 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     input_raster_plot_configs = sdr_ndr_utils.build_input_raster_plot_configs(
         args_dict, INPUT_RASTER_PLOT_TUPLES)
 
-    output_raster_plot_configs = sdr_ndr_utils.build_output_raster_plot_configs(
-        file_registry, OUTPUT_RASTER_PLOT_TUPLES)
+    output_raster_plot_configs = (
+        sdr_ndr_utils.build_output_raster_plot_configs(
+            file_registry, OUTPUT_RASTER_PLOT_TUPLES))
 
-    intermediate_raster_plot_configs = sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
-        args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
+    intermediate_raster_plot_configs = (
+        sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
+            args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES))
 
     raster_plot_configs = RasterPlotConfigGroup(
         input_raster_plot_configs,
         output_raster_plot_configs,
         intermediate_raster_plot_configs)
 
+    results_vector_id = 'watershed_results_sdr'
+    results_vector_cols_to_sum = [
+        'usle_tot', 'sed_export', 'sed_dep', 'avoid_exp', 'avoid_eros']
+
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs)
+        raster_plot_configs, results_vector_id, results_vector_cols_to_sum)

@@ -1,13 +1,9 @@
-import json
-import logging
-import os
-import sys
-
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
 from invest_reports.utils import RasterPlotConfig, RasterPlotConfigGroup
 
-LOGGER = logging.getLogger(__name__)
+CALC_N = 'calc_n'
+CALC_P = 'calc_p'
 
 INPUT_RASTER_PLOT_TUPLES = [
     ('dem_path', 'continuous'),
@@ -16,12 +12,12 @@ INPUT_RASTER_PLOT_TUPLES = [
 ]
 
 OUTPUT_RASTER_PLOT_TUPLES = {
-    'calc_n': [
+    CALC_N: [
         ('n_surface_export', 'continuous', 'linear'),
         ('n_subsurface_export', 'continuous', 'linear'),
         ('n_total_export', 'continuous', 'linear'),
     ],
-    'calc_p': [
+    CALC_P: [
         ('p_surface_export', 'continuous', 'linear')
     ],
 }
@@ -31,18 +27,38 @@ INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
     ('what_drains_to_stream', 'binary'),
 ]
 
+RESULTS_VECTOR_COL_NAMES = {
+    CALC_N: [
+        'n_surface_load',
+        'n_surface_export',
+        'n_subsurface_export',
+        'n_total_export',
+        'n_subsurface_load',
+    ],
+    CALC_P: [
+        'p_surface_load',
+        'p_surface_export',
+    ]
+}
+
 
 def _build_output_raster_plot_configs(args_dict, file_registry):
     output_raster_plot_tuples = []
-    if args_dict['calc_n']:
-        output_raster_plot_tuples.extend(
-            OUTPUT_RASTER_PLOT_TUPLES['calc_n'])
-    if args_dict['calc_p']:
-        output_raster_plot_tuples.extend(
-            OUTPUT_RASTER_PLOT_TUPLES['calc_p'])
+    for key in [CALC_N, CALC_P]:
+        if args_dict[key]:
+            output_raster_plot_tuples.extend(
+                OUTPUT_RASTER_PLOT_TUPLES[key])
     return [
         RasterPlotConfig(file_registry[output_id], datatype, transform)
         for (output_id, datatype, transform) in output_raster_plot_tuples]
+
+
+def _get_vector_cols_to_sum(args_dict):
+    vector_cols_to_sum = []
+    for key in [CALC_N, CALC_P]:
+        if args_dict[key]:
+            vector_cols_to_sum.extend(RESULTS_VECTOR_COL_NAMES[key])
+    return vector_cols_to_sum
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
@@ -67,15 +83,18 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     output_raster_plot_configs = _build_output_raster_plot_configs(
         args_dict, file_registry)
 
-    intermediate_raster_plot_configs = sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
-        args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
+    intermediate_raster_plot_configs = (
+        sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
+            args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES))
 
     raster_plot_configs = RasterPlotConfigGroup(
         input_raster_plot_configs,
         output_raster_plot_configs,
         intermediate_raster_plot_configs)
 
+    results_vector_id = 'watershed_results_ndr'
+    results_vector_cols_to_sum = _get_vector_cols_to_sum(args_dict)
+
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs)
-
+        raster_plot_configs, results_vector_id, results_vector_cols_to_sum)
