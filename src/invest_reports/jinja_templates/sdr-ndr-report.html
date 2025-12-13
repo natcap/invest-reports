@@ -10,6 +10,7 @@
   {{ super() }}
 
   {% from 'args-table.html' import args_table with context %}
+  {% from 'caption.html' import caption %}
   {% from 'content-grid.html' import content_grid %}
   {% from 'metadata.html' import list_metadata %}
   {% from 'raster-plot-img.html' import raster_plot_img %}
@@ -42,12 +43,18 @@
 
   {{ accordion_section(
     'Primary Outputs',
-    raster_plot_img(outputs_img_src, 'Primary Outputs')
+    content_grid([
+      (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
+      (caption(outputs_caption), 100)
+    ])
   )}}
 
   {{ accordion_section(
     intermediate_outputs_heading,
-    raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading)
+    content_grid([
+    (raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading), 100),
+    (caption(intermediate_outputs_caption), 100)
+    ])
   )}}
 
   {{ accordion_section(
@@ -72,7 +79,10 @@
 
   {{ accordion_section(
     'Raster Inputs',
-    raster_plot_img(inputs_img_src, 'Raster Inputs')
+    content_grid([
+      (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
+      (caption(inputs_caption), 100)
+    ])
   )}}
 
   {{ accordion_section(

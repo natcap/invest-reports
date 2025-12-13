@@ -1,12 +1,20 @@
 # Utils shared by SDR and NDR
 # (to be extended to support other similar models, and renamed as appropriate)
 
+from collections import namedtuple
+import os
+
 import geopandas
 import pandas
+
+from natcap.invest.spec import ModelSpec
 
 from invest_reports.utils import RasterPlotConfig
 
 TABLE_PAGINATION_THRESHOLD = 10
+
+RasterPlotCaptionGroup = namedtuple(
+    'RasterPlotCaptionGroup', ['inputs', 'outputs', 'intermediates'])
 
 
 def build_input_raster_plot_configs(args_dict, raster_plot_tuples):
@@ -47,3 +55,24 @@ def generate_results_table_from_vector(filepath, cols_to_sum):
         index=False, na_rep='', classes=css_classes)
 
     return (html_table_main, html_table_totals)
+
+
+def generate_caption_from_raster_list(
+        raster_list: list[tuple[str, str]], args_dict,
+        file_registry, model_spec: ModelSpec):
+    caption = [
+        """
+        An asterisk (*) in a plot title indicates that raster was resampled to
+        a lower resolution for plotting. Full resolution rasters are available
+        in the output workspace.
+        """
+    ]
+    for (id, input_or_output) in raster_list:
+        if input_or_output == 'input':
+            filename = os.path.basename(args_dict[id])
+            about_text = model_spec.get_input(id).about
+        elif input_or_output == 'output':
+            about_text = model_spec.get_output(id).about
+            filename = os.path.basename(file_registry[id])
+        caption.append(f'{filename}: {about_text}')
+    return caption

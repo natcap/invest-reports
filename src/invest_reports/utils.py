@@ -121,9 +121,10 @@ def _figure_subplots(map_bbox, n_plots):
     n_rows, n_cols, xy_ratio = _choose_n_rows_n_cols(map_bbox, n_plots)
 
     sub_width = FIGURE_WIDTH / n_cols
-    sub_height = (sub_width / xy_ratio) + 0.5  # in; expand vertically for title
+    sub_height = (sub_width / xy_ratio) + 1.0  # in; expand vertically for title & subtitle
     return plt.subplots(
-        n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height), layout='constrained')
+        n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height),
+        layout='constrained')
 
 
 def plot_choropleth(gdf, field_list):
@@ -187,7 +188,12 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
             patches = [matplotlib.patches.Patch(
                 color=colors[i], label=f'{values[i]}') for i in range(len(values))]
             legend = True
-        ax.set(title=f"{os.path.basename(tif)}{'*' if resampled else ''}")
+        ax.set_title(
+            label=f"{os.path.basename(tif)}{'*' if resampled else ''}",
+            loc='left', y=1.12, pad=0,
+            fontfamily='monospace', fontsize=14, fontweight=700)
+        # @TODO: get units from model spec or metadata
+        ax.text(x=0.0, y=1.0, s='Units: coming soon', fontsize=12)
         if legend:
             leg = ax.legend(handles=patches, bbox_to_anchor=(1.02, 1), loc=2)
             leg.set_in_layout(False)
