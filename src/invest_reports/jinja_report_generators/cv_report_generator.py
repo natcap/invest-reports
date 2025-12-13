@@ -424,6 +424,5 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
             wave_energy_map_caption=wave_energy_map_caption,
             wave_energy_map_source_list=wave_energy_map_source_list,
             model_spec_outputs=model_spec.outputs,
-            accordions_open_on_load=True,
         ))
     LOGGER.info(f'Created {target_html_filepath}')
