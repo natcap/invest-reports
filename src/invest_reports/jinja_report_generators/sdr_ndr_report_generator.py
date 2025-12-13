@@ -86,7 +86,6 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             input_raster_stats_table=input_raster_stats_table,
             stats_table_note=stats_table_note,
             model_spec_outputs=model_spec.outputs,
-            accordions_open_on_load=True,
         ))
 
     LOGGER.info(f'Created {target_html_filepath}')
