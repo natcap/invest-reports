@@ -44,16 +44,18 @@
   {{ accordion_section(
     'Primary Outputs',
     content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
       (raster_plot_img(outputs_img_src, 'Primary Outputs'), 100),
-      (caption(outputs_caption), 100)
+      (caption(outputs_caption, definition_list=True), 100)
     ])
   )}}
 
   {{ accordion_section(
     intermediate_outputs_heading,
     content_grid([
-    (raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading), 100),
-    (caption(intermediate_outputs_caption), 100)
+      (caption(raster_group_caption, pre_caption=True), 100),
+      (raster_plot_img(intermediate_outputs_img_src, intermediate_outputs_heading), 100),
+      (caption(intermediate_outputs_caption, definition_list=True), 100)
     ])
   )}}
 
@@ -80,8 +82,9 @@
   {{ accordion_section(
     'Raster Inputs',
     content_grid([
+      (caption(raster_group_caption, pre_caption=True), 100),
       (raster_plot_img(inputs_img_src, 'Raster Inputs'), 100),
-      (caption(inputs_caption), 100)
+      (caption(inputs_caption, definition_list=True), 100)
     ])
   )}}
 

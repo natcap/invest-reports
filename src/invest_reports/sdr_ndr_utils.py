@@ -57,16 +57,11 @@ def generate_results_table_from_vector(filepath, cols_to_sum):
     return (html_table_main, html_table_totals)
 
 
+# @TODO: include note about routing algorithm & stream resolution, if relevant
 def generate_caption_from_raster_list(
         raster_list: list[tuple[str, str]], args_dict,
         file_registry, model_spec: ModelSpec):
-    caption = [
-        """
-        An asterisk (*) in a plot title indicates that raster was resampled to
-        a lower resolution for plotting. Full resolution rasters are available
-        in the output workspace.
-        """
-    ]
+    caption = []
     for (id, input_or_output) in raster_list:
         if input_or_output == 'input':
             filename = os.path.basename(args_dict[id])
@@ -74,5 +69,5 @@ def generate_caption_from_raster_list(
         elif input_or_output == 'output':
             about_text = model_spec.get_output(id).about
             filename = os.path.basename(file_registry[id])
-        caption.append(f'{filename}: {about_text}')
+        caption.append(f'{filename}:{about_text}')
     return caption

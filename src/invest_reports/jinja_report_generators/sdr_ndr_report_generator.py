@@ -65,6 +65,12 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
         'you identify cases of unexpected nodata.'
     )
 
+    raster_group_caption = (
+        'If a plot title includes "resampled," that raster was resampled to '
+        'a lower resolution for rendering in this report. Full resolution '
+        'rasters are available in the output workspace.'
+    )
+
     with open(target_html_filepath, 'w', encoding='utf-8') as target_file:
         target_file.write(TEMPLATE.render(
             report_script=__file__,
@@ -80,6 +86,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath,
             intermediate_outputs_heading='Stream Network Maps',
             intermediate_outputs_img_src=intermediate_img_src,
             intermediate_outputs_caption=raster_plot_captions.intermediates,
+            raster_group_caption=raster_group_caption,
             ws_vector_table=ws_vector_table,
             ws_vector_totals_table=ws_vector_totals_table,
             output_raster_stats_table=output_raster_stats_table,
