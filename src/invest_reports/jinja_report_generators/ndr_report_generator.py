@@ -1,5 +1,6 @@
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
+from invest_reports.sdr_ndr_utils import RasterPlotCaptionGroup
 from invest_reports.utils import RasterPlotConfig, RasterPlotConfigGroup
 
 CALC_N = 'calc_n'
@@ -40,6 +41,15 @@ RESULTS_VECTOR_COL_NAMES = {
         'p_surface_export',
     ]
 }
+
+
+def _get_output_raster_plot_ids(args_dict):
+    output_raster_plot_ids = []
+    for key in [CALC_N, CALC_P]:
+        if (args_dict[key]):
+            output_raster_plot_ids.extend(
+                id for (id, _, _) in OUTPUT_RASTER_PLOT_TUPLES[key])
+    return output_raster_plot_ids
 
 
 def _build_output_raster_plot_configs(args_dict, file_registry):
@@ -92,9 +102,25 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         output_raster_plot_configs,
         intermediate_raster_plot_configs)
 
+    input_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
+        [(id, 'input') for (id, _) in INPUT_RASTER_PLOT_TUPLES],
+        args_dict, file_registry, model_spec)
+    output_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
+        [(id, 'output') for id in _get_output_raster_plot_ids(args_dict)],
+        args_dict, file_registry, model_spec)
+    intermediate_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
+        [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
+        args_dict, file_registry, model_spec)
+
+    captions = RasterPlotCaptionGroup(
+        inputs=input_raster_caption,
+        outputs=output_raster_caption,
+        intermediates=intermediate_raster_caption)
+
     results_vector_id = 'watershed_results_ndr'
     results_vector_cols_to_sum = _get_vector_cols_to_sum(args_dict)
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs, results_vector_id, results_vector_cols_to_sum)
+        raster_plot_configs, captions,
+        results_vector_id, results_vector_cols_to_sum)

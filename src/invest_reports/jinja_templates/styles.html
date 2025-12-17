@@ -20,6 +20,7 @@
   body {
     color: #000000;
     font-family: Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.5;
     margin: 0;
     min-height: calc(100vh - 2rem);
   }
@@ -178,15 +179,45 @@
     font-size: 0.8rem;
   }
   .caption {
+    --caption-border: 1px solid #000;
     background-color: ghostwhite;
-    border-top: solid 0.5px;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    padding-bottom: 0.1rem;
-    margin: 0;
+    &:not(.pre-caption) {
+      border-top: var(--caption-border);
+      padding: 0 1rem 1rem;
+      p, dl {
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+    &.pre-caption {
+      border-bottom: var(--caption-border);
+      padding: 1rem 1rem 0;
+      p, dl {
+        &:first-child {
+          margin-top: 0;
+        }
+      }
+    }
+    dl {
+      padding-left: 1rem;
+      .definition-list-item {
+        display: list-item;
+        padding: 0.25rem 0;
+        dt, dd {
+          display: inline;
+        }
+        dt::after {
+          content: ':';
+        }
+        dd {
+          margin-left: 0;
+        }
+      }
+    }
   }
   .sources {
-    font-size: 0.8rem;
+    font-size: 0.875rem;
     font-style: italic;
     overflow-wrap: break-word;
   }

@@ -16,6 +16,10 @@ def _get_render_args(model_spec):
     output_stats_table = '<table class="test__output-stats-table></table>'
     input_stats_table = '<table class="test__input-stats-table></table>'
     stats_table_note = 'This is a test!'
+    inputs_caption = ['input.tif:Input map.']
+    outputs_caption = ['results.tif:Results map.']
+    intermediate_outputs_caption = ['stream.tif:Stream network map.']
+    raster_group_caption = 'This is another test!'
 
     return {
         'report_script': __file__,
@@ -25,9 +29,13 @@ def _get_render_args(model_spec):
         'timestamp': timestamp,
         'args_dict': args_dict,
         'inputs_img_src': img_src,
+        'inputs_caption': inputs_caption,
         'outputs_img_src': img_src,
+        'outputs_caption': outputs_caption,
         'intermediate_outputs_heading': intermediate_outputs_heading,
         'intermediate_outputs_img_src': img_src,
+        'intermediate_outputs_caption': intermediate_outputs_caption,
+        'raster_group_caption': raster_group_caption,
         'ws_vector_table': ws_vector_table,
         'ws_vector_totals_table': ws_vector_totals_table,
         'output_raster_stats_table': output_stats_table,
@@ -86,9 +94,13 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             timestamp='',
             args_dict=None,
             inputs_img_src='',
+            inputs_caption=[],
             outputs_img_src='',
+            outputs_caption=[],
             intermediate_outputs_heading='',
             intermediate_outputs_img_src='',
+            intermediate_outputs_caption=[],
+            raster_group_caption='',
             ws_vector_table=ws_vector_table,
             ws_vector_totals_table=ws_vector_totals_table,
             output_raster_stats_table='',
@@ -124,9 +136,13 @@ class SDR_NDR_TemplateTests(unittest.TestCase):
             timestamp='',
             args_dict=None,
             inputs_img_src='',
+            inputs_caption=[],
             outputs_img_src='',
+            outputs_caption=[],
             intermediate_outputs_heading='',
             intermediate_outputs_img_src='',
+            intermediate_outputs_caption=[],
+            raster_group_caption='',
             ws_vector_table=ws_vector_table,
             ws_vector_totals_table=ws_vector_totals_table,
             output_raster_stats_table='',

@@ -121,9 +121,10 @@ def _figure_subplots(map_bbox, n_plots):
     n_rows, n_cols, xy_ratio = _choose_n_rows_n_cols(map_bbox, n_plots)
 
     sub_width = FIGURE_WIDTH / n_cols
-    sub_height = (sub_width / xy_ratio) + 0.5  # in; expand vertically for title
+    sub_height = (sub_width / xy_ratio) + 1.0  # in; expand vertically for title & subtitle
     return plt.subplots(
-        n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height), layout='constrained')
+        n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height),
+        layout='constrained')
 
 
 def plot_choropleth(gdf, field_list):
@@ -148,6 +149,8 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
             transformation to apply to the colormap.
             Either 'linear' or 'log'.
 
+    Returns:
+        ``matplotlib.figure.Figure``
     """
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
     bbox = raster_info['bounding_box']
@@ -174,6 +177,7 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
             imshow_kwargs['norm'] = transform
         if dtype == 'binary':
             transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
+            # @TODO: ¿update imshow_kwargs['norm']?
             imshow_kwargs['vmin'] = -0.5
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
@@ -187,7 +191,13 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
             patches = [matplotlib.patches.Patch(
                 color=colors[i], label=f'{values[i]}') for i in range(len(values))]
             legend = True
-        ax.set(title=f"{os.path.basename(tif)}{'*' if resampled else ''}")
+        ax.set_title(
+            label=f"{os.path.basename(tif)}{' (resampled)' if resampled else ''}",
+            loc='left', y=1.12, pad=0,
+            fontfamily='monospace', fontsize=14, fontweight=700)
+        units = _get_raster_units(tif)
+        if units:
+            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
         if legend:
             leg = ax.legend(handles=patches, bbox_to_anchor=(1.02, 1), loc=2)
             leg.set_in_layout(False)
@@ -354,6 +364,25 @@ def _build_stats_table_row(resource, band):
     return row
 
 
+def _get_raster_metadata(filepath):
+    if isinstance(filepath, collections.abc.Mapping):
+        for path in filepath.values():
+            _get_raster_metadata(path)
+    else:
+        try:
+            resource = geometamaker_load(f'{filepath}.yml')
+        except (FileNotFoundError, ValueError) as err:
+            LOGGER.debug(err)
+            return None
+        if isinstance(resource, geometamaker.models.RasterResource):
+            return resource
+
+
+def _get_raster_units(filepath):
+    resource = _get_raster_metadata(filepath)
+    return resource.get_band_description(1).units if resource else None
+
+
 # @TODO tests for this function could use the same setup
 # as invest's test_spec.py:TestMetadataFromSpec.
 # @TODO This function's recursion through a file registry is duplicated in
@@ -362,24 +391,13 @@ def _build_stats_table_row(resource, band):
 def raster_workspace_summary(file_registry):
     raster_summary = {}
 
-    def _get_raster_metadata(filepath):
-        if isinstance(filepath, collections.abc.Mapping):
-            for k, v in filepath.items():
-                _get_raster_metadata(v)
-        else:
-            try:
-                resource = geometamaker_load(f'{filepath}.yml')
-            except (FileNotFoundError, ValueError) as err:
-                LOGGER.debug(err)
-                return
-            if isinstance(resource, geometamaker.models.RasterResource):
-                filename = os.path.basename(filepath)
-                band = resource.get_band_description(1)
-                raster_summary[filename] = _build_stats_table_row(
-                    resource, band)
-
-    for key, value in file_registry.items():
-        _get_raster_metadata(value)
+    for path in file_registry.values():
+        resource = _get_raster_metadata(path)
+        band = resource.get_band_description(1) if resource else None
+        if band:
+            filename = os.path.basename(path)
+            raster_summary[filename] = _build_stats_table_row(
+                resource, band)
 
     return pandas.DataFrame(raster_summary).T
 

@@ -1,5 +1,6 @@
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
+from invest_reports.sdr_ndr_utils import RasterPlotCaptionGroup
 from invest_reports.utils import RasterPlotConfigGroup
 
 INPUT_RASTER_PLOT_TUPLES = [
@@ -56,10 +57,26 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         output_raster_plot_configs,
         intermediate_raster_plot_configs)
 
+    input_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
+        [(id, 'input') for (id, _) in INPUT_RASTER_PLOT_TUPLES],
+        args_dict, file_registry, model_spec)
+    output_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
+        [(id, 'output') for (id, _, _) in OUTPUT_RASTER_PLOT_TUPLES],
+        args_dict, file_registry, model_spec)
+    intermediate_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
+        [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
+        args_dict, file_registry, model_spec)
+
+    captions = RasterPlotCaptionGroup(
+        inputs=input_raster_caption,
+        outputs=output_raster_caption,
+        intermediates=intermediate_raster_caption)
+
     results_vector_id = 'watershed_results_sdr'
     results_vector_cols_to_sum = [
         'usle_tot', 'sed_export', 'sed_dep', 'avoid_exp', 'avoid_eros']
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
-        raster_plot_configs, results_vector_id, results_vector_cols_to_sum)
+        raster_plot_configs, captions,
+        results_vector_id, results_vector_cols_to_sum)
