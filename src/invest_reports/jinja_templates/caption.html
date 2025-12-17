@@ -7,7 +7,9 @@
     (i.e., above) the figure it describes.
 -->
 
-{% macro caption(text, source_list=None, definition_list=False,pre_caption=False) -%}
+{% macro caption(
+  text, source_list=None, definition_list=False, pre_caption=False
+) -%}
   {% if text is string %}
     {% set text = [text] %}
   {% endif %}
