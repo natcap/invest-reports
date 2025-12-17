@@ -20,7 +20,7 @@
           {% set parts = item.split(':') %}
           <div class="definition-list-item">
             <dt>{{ parts[0] }}</dt>
-            <dd>{{ parts[1] }}</dd>
+            <dd>{{ ':'.join(parts[1:]) }}</dd>
           </div>
         {% endfor %}
       </dl>
