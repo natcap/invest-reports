@@ -112,6 +112,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     intermediate_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
         [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
         args_dict, file_registry, model_spec)
+    intermediate_raster_caption = (
+        sdr_ndr_utils.update_caption_with_stream_map_info(
+            intermediate_raster_caption, args_dict['flow_dir_algorithm']))
 
     captions = RasterPlotCaptionGroup(
         inputs=input_raster_caption,

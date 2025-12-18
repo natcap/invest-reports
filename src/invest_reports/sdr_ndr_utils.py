@@ -68,3 +68,16 @@ def generate_caption_from_raster_list(
             filename = os.path.basename(file_registry[id])
         caption.append(f'{filename}:{about_text}')
     return caption
+
+
+def update_caption_with_stream_map_info(caption: list[str], flow_dir_alg: str):
+    stream_map_info = (
+        f' Results were generated using the {flow_dir_alg.upper()} flow '
+        'direction algorithm. The stream network may look incomplete at '
+        'this resolution, and therefore it may be necessary to view the '
+        'full-resolution raster in GIS to assess its accuracy.')
+    return [
+        (list_item + stream_map_info
+            if list_item.startswith('stream')
+            else list_item)
+        for list_item in caption]
