@@ -28,9 +28,7 @@ def build_output_raster_plot_configs(file_registry, raster_plot_tuples):
 
 
 def build_intermediate_output_raster_plot_configs(
-        args_dict, file_registry, raster_plot_tuples):
-    if args_dict['flow_dir_algorithm'] != 'D8':
-        raster_plot_tuples.append(('stream', 'binary'))
+        file_registry, raster_plot_tuples):
     return [RasterPlotConfig(file_registry[output_id], datatype)
             for (output_id, datatype) in raster_plot_tuples]
 
@@ -57,7 +55,6 @@ def generate_results_table_from_vector(filepath, cols_to_sum):
     return (html_table_main, html_table_totals)
 
 
-# @TODO: include note about routing algorithm & stream resolution, if relevant
 def generate_caption_from_raster_list(
         raster_list: list[tuple[str, str]], args_dict,
         file_registry, model_spec: ModelSpec):

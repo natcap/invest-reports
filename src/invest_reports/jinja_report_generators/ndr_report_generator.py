@@ -26,6 +26,7 @@ OUTPUT_RASTER_PLOT_TUPLES = {
 INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
     ('masked_dem', 'continuous'),
     ('what_drains_to_stream', 'binary'),
+    ('stream', 'binary'),
 ]
 
 RESULTS_VECTOR_COL_NAMES = {
@@ -95,7 +96,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     intermediate_raster_plot_configs = (
         sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
-            args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES))
+            file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES))
 
     raster_plot_configs = RasterPlotConfigGroup(
         input_raster_plot_configs,
