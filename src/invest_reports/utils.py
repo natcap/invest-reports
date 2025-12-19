@@ -152,9 +152,9 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
 
     Args:
         tif_list (list): list of filepaths to rasters
-        datatype_list (list): list of strings describing the data
-            of each raster. One of,
-            ('continuous', 'divergent', 'nominal', 'binary').
+        datatype_list (list): list of strings describing the data of each
+            raster. One of ('continuous', 'divergent', 'nominal', 'binary',
+            'binary_high_contrast').
         transform_list (list): list of strings describing the
             transformation to apply to the colormap.
             Either 'linear' or 'log'.
@@ -255,9 +255,9 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
     Args:
         raster_dtype_list (list[RasterPlotConfig]): a list of RasterPlotConfig
             objects, each of which contains the path to a raster, the type
-            of data in the raster ('continuous', 'divergent', 'nominal', or
-            'binary'), and the transformation to apply to the colormap
-            ('linear' or 'log').
+            of data in the raster ('continuous', 'divergent', 'nominal',
+            'binary', or 'binary_high_contrast'), and the transformation to
+            apply to the colormap ('linear' or 'log').
 
     Returns:
         A string representing a base64-encoded PNG in which each of the
@@ -286,8 +286,9 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
 
     Args:
         tif_list (list): list of filepaths to rasters
-        datatype (str): string describing the datatype of rasters. One of,
-            ('continuous', 'divergent', 'nominal', 'binary').
+        datatype (str): string describing the datatype of rasters. One of
+            ('continuous', 'divergent', 'nominal', 'binary',
+            'binary_high_contrast').
         transform (str): string describing the transformation to apply
             to the colormap. Either 'linear' or 'log'.
 
