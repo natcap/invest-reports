@@ -79,16 +79,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
 
     output_raster_plot_tuples = _get_output_raster_plot_tuples(args_dict)
 
-    input_raster_plot_configs = sdr_ndr_utils.build_input_raster_plot_configs(
+    input_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
         args_dict, INPUT_RASTER_PLOT_TUPLES)
 
-    output_raster_plot_configs = (
-        sdr_ndr_utils.build_output_raster_plot_configs(
-            file_registry, output_raster_plot_tuples))
+    output_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
+            file_registry, output_raster_plot_tuples)
 
-    intermediate_raster_plot_configs = (
-        sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
-            file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES))
+    intermediate_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
+            file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
 
     raster_plot_configs = RasterPlotConfigGroup(
         input_raster_plot_configs,

@@ -17,20 +17,12 @@ RasterPlotCaptionGroup = namedtuple(
     'RasterPlotCaptionGroup', ['inputs', 'outputs', 'intermediates'])
 
 
-def build_input_raster_plot_configs(args_dict, raster_plot_tuples):
-    return [RasterPlotConfig(args_dict[input_id], datatype)
-            for (input_id, datatype) in raster_plot_tuples]
-
-
-def build_output_raster_plot_configs(file_registry, raster_plot_tuples):
-    return [RasterPlotConfig(file_registry[output_id], datatype, transform)
-            for (output_id, datatype, transform) in raster_plot_tuples]
-
-
-def build_intermediate_output_raster_plot_configs(
-        file_registry, raster_plot_tuples):
-    return [RasterPlotConfig(file_registry[output_id], datatype)
-            for (output_id, datatype) in raster_plot_tuples]
+def build_raster_plot_configs(id_lookup_table, raster_plot_tuples):
+    raster_plot_configs = []
+    for (raster_id, *other_args) in raster_plot_tuples:
+        raster_path = id_lookup_table[raster_id]
+        raster_plot_configs.append(RasterPlotConfig(raster_path, *other_args))
+    return raster_plot_configs
 
 
 def generate_results_table_from_vector(filepath, cols_to_sum):
