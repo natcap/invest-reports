@@ -110,3 +110,126 @@ class JinjaTemplateUnitTests(unittest.TestCase):
         self.assertIn('<div class="caption pre-caption">', html)
         self.assertIn(text, html)
 
+    def test_raster_plot_img(self):
+        """Test raster_plot_img macro."""
+
+        template_str = (
+            """
+            <html>
+                {% from 'raster-plot-img.html' import raster_plot_img %}
+                {{ raster_plot_img(img_src, img_name) }}
+            </html>
+            """
+        )
+        img_src = 'PiNeAPpLeUNdeRtHeSEa'
+        img_name = 'Bathymetry Maps'
+
+        template = jinja_env.from_string(template_str)
+        html = template.render(img_src=img_src, img_name=img_name)
+        # Discard newlines and tabs.
+        html = ' '.join(html.split())
+
+        self.assertIn((f'<img src="data:image/png;base64,{img_src}" '
+                       f'alt="Raster plots: {img_name}" />'), html)
+
+    def test_args_table(self):
+        """Test args_table macro."""
+
+        template_str = (
+            """
+            <html>
+                {% from 'args-table.html' import args_table with context %}
+                {{ args_table() }}
+            </html>
+            """
+        )
+        args_dict = {
+            'Fruit': 'Orange',
+            'Vegetable': 'Okra',
+            'Herb': 'Oregano',
+        }
+
+        template = jinja_env.from_string(template_str)
+        html = template.render(args_dict=args_dict)
+
+        self.assertIn('<table>', html)
+        self.assertIn('<th>Name</th>', html)
+        self.assertIn('<th>Value</th>', html)
+        for (key, value) in args_dict.items():
+            self.assertIn(f'<td>{key}</td>', html)
+            self.assertIn(f'<td>{value}</td>', html)
+
+    def test_wide_table(self):
+        """Test wide_table macro."""
+
+        template_str = (
+            """
+            <html>
+                {% from 'wide-table.html' import wide_table %}
+                {{ wide_table(table | safe) }}
+            </html>
+            """
+        )
+        table = '<table class="test__table"></table>'
+
+        template = jinja_env.from_string(template_str)
+        html = template.render(table=table)
+        # Discard newlines and tabs.
+        html = ' '.join(html.split())
+
+        self.assertIn(
+            '<div class="wide-table-wrapper" style="font-size: 0.875rem;" >',
+            html)
+        self.assertIn(table, html)
+        self.assertIn('', html)
+
+    def test_wide_table_with_custom_font_size(self):
+        """Test wide_table macro with custom font size."""
+
+        template_str = (
+            """
+            <html>
+                {% from 'wide-table.html' import wide_table %}
+                {{ wide_table(table | safe, font_size_px) }}
+            </html>
+            """
+        )
+        table = '<table class="test__table"></table>'
+        font_size_px = 20
+
+        template = jinja_env.from_string(template_str)
+        html = template.render(table=table, font_size_px=font_size_px)
+        # Discard newlines and tabs.
+        html = ' '.join(html.split())
+
+        self.assertIn(
+            '<div class="wide-table-wrapper" style="font-size: 1.25rem;" >',
+            html)
+        self.assertIn(table, html)
+        self.assertIn('', html)
+
+    def test_wide_table_minimum_font_size(self):
+        """Test wide_table macro with custom font size that is too small."""
+
+        template_str = (
+            """
+            <html>
+                {% from 'wide-table.html' import wide_table %}
+                {{ wide_table(table | safe, font_size_px) }}
+            </html>
+            """
+        )
+        table = '<table class="test__table"></table>'
+        font_size_px = 11
+
+        template = jinja_env.from_string(template_str)
+        html = template.render(table=table, font_size_px=font_size_px)
+        # Discard newlines and tabs.
+        html = ' '.join(html.split())
+
+        # Font size should fall back to macro-defined minimum: 12px = 0.75rem.
+        self.assertIn(
+            '<div class="wide-table-wrapper" style="font-size: 0.75rem;" >',
+            html)
+        self.assertIn(table, html)
+        self.assertIn('', html)
