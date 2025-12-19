@@ -50,7 +50,7 @@ def _get_nutrient_dependent_list(args_dict, reference_dict):
     Args:
         args_dict (dict): The arguments that were passed to the model's
             ``execute`` method.
-        reference_dict (dict[str, list[any]): The reference_dict to copy items
+        reference_dict (dict[str, list[any]): The reference dict to copy items
             from. Must contain keys ``CALC_N`` and ``CALC_P``.
 
     Returns:
