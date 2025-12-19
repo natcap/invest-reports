@@ -58,3 +58,55 @@ class JinjaTemplateUnitTests(unittest.TestCase):
         for text in text_list:
             self.assertIn(text, html)
         self.assertNotIn('Sources', html)
+
+    def test_caption_with_definition_list_option(self):
+        """Test caption macro with definition_list=True."""
+
+        template_str = (
+            """
+            <html>
+                {% from 'caption.html' import caption %}
+                {{ caption(text, definition_list=True) }}
+            </html>
+            """
+        )
+        definitions = [
+            ('Simile',
+             ('A comparison that uses like or as, e.g., '
+              'life is like a box of chocolates.')),
+            ('Analogy',
+             ('A binary relationship defined in terms of another binary '
+              'relationship. Typically follows the form A is to B as '
+              'C is to D, or, in shorthand: A : B :: C : D.')),
+        ]
+        text = [f'{term}:{definition}' for (term, definition) in definitions]
+
+        template = jinja_env.from_string(template_str)
+        html = template.render(text=text)
+
+        self.assertIn('<dl>', html)
+        for (term, definition) in definitions:
+            self.assertIn(f'<dt>{term}</dt>', html)
+            self.assertIn(f'<dd>{definition}</dd>', html)
+        self.assertIn('</dl>', html)
+        self.assertNotIn('<p>', html)
+
+    def test_caption_with_pre_caption_option(self):
+        """Test caption macro with pre_caption=True."""
+        template_str = (
+            """
+            <html>
+                {% from 'caption.html' import caption %}
+                {{ caption(text, pre_caption=True) }}
+            </html>
+            """
+        )
+        text = ('This is meant to appear above an image (instead of below) '
+                'and should be styled accordingly.')
+
+        template = jinja_env.from_string(template_str)
+        html = template.render(text=text)
+
+        self.assertIn('<div class="caption pre-caption">', html)
+        self.assertIn(text, html)
+
