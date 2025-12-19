@@ -22,6 +22,7 @@ OUTPUT_RASTER_PLOT_TUPLES = [
 INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
     ('pit_filled_dem', 'continuous'),
     ('what_drains_to_stream', 'binary'),
+    ('stream', 'binary_high_contrast'),
 ]
 
 
@@ -41,16 +42,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         ``None``
     """
 
-    input_raster_plot_configs = sdr_ndr_utils.build_input_raster_plot_configs(
+    input_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
         args_dict, INPUT_RASTER_PLOT_TUPLES)
 
-    output_raster_plot_configs = (
-        sdr_ndr_utils.build_output_raster_plot_configs(
-            file_registry, OUTPUT_RASTER_PLOT_TUPLES))
+    output_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
+            file_registry, OUTPUT_RASTER_PLOT_TUPLES)
 
-    intermediate_raster_plot_configs = (
-        sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
-            args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES))
+    intermediate_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
+            file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
 
     raster_plot_configs = RasterPlotConfigGroup(
         input_raster_plot_configs,
@@ -66,6 +65,9 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
     intermediate_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
         [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
         args_dict, file_registry, model_spec)
+    intermediate_raster_caption = (
+        sdr_ndr_utils.update_caption_with_stream_map_info(
+            intermediate_raster_caption, args_dict['flow_dir_algorithm']))
 
     captions = RasterPlotCaptionGroup(
         inputs=input_raster_caption,

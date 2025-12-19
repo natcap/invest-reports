@@ -1,7 +1,7 @@
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
 from invest_reports.sdr_ndr_utils import RasterPlotCaptionGroup
-from invest_reports.utils import RasterPlotConfig, RasterPlotConfigGroup
+from invest_reports.utils import RasterPlotConfigGroup
 
 CALC_N = 'calc_n'
 CALC_P = 'calc_p'
@@ -26,6 +26,7 @@ OUTPUT_RASTER_PLOT_TUPLES = {
 INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
     ('masked_dem', 'continuous'),
     ('what_drains_to_stream', 'binary'),
+    ('stream', 'binary_high_contrast'),
 ]
 
 RESULTS_VECTOR_COL_NAMES = {
@@ -43,32 +44,25 @@ RESULTS_VECTOR_COL_NAMES = {
 }
 
 
-def _get_output_raster_plot_ids(args_dict):
-    output_raster_plot_ids = []
-    for key in [CALC_N, CALC_P]:
-        if (args_dict[key]):
-            output_raster_plot_ids.extend(
-                id for (id, _, _) in OUTPUT_RASTER_PLOT_TUPLES[key])
-    return output_raster_plot_ids
+def _get_nutrient_dependent_list(args_dict, reference_dict):
+    """Build a list of items based on which nutrients were calculated.
 
+    Args:
+        args_dict (dict): The arguments that were passed to the model's
+            ``execute`` method.
+        reference_dict (dict[str, list[any]): The reference dict to copy items
+            from. Must contain keys ``CALC_N`` and ``CALC_P``.
 
-def _build_output_raster_plot_configs(args_dict, file_registry):
-    output_raster_plot_tuples = []
-    for key in [CALC_N, CALC_P]:
-        if args_dict[key]:
-            output_raster_plot_tuples.extend(
-                OUTPUT_RASTER_PLOT_TUPLES[key])
-    return [
-        RasterPlotConfig(file_registry[output_id], datatype, transform)
-        for (output_id, datatype, transform) in output_raster_plot_tuples]
-
-
-def _get_vector_cols_to_sum(args_dict):
-    vector_cols_to_sum = []
+    Returns:
+        A list of the items found in ``reference_dict[CALC_N]``,
+            ``reference_dict[CALC_P]``, or both, depending on the values in
+            ``args_dict``.
+    """
+    item_list = []
     for key in [CALC_N, CALC_P]:
         if args_dict[key]:
-            vector_cols_to_sum.extend(RESULTS_VECTOR_COL_NAMES[key])
-    return vector_cols_to_sum
+            item_list.extend(reference_dict[key])
+    return item_list
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
@@ -87,15 +81,17 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         ``None``
     """
 
-    input_raster_plot_configs = sdr_ndr_utils.build_input_raster_plot_configs(
+    output_raster_plot_tuples = _get_nutrient_dependent_list(
+        args_dict, OUTPUT_RASTER_PLOT_TUPLES)
+
+    input_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
         args_dict, INPUT_RASTER_PLOT_TUPLES)
 
-    output_raster_plot_configs = _build_output_raster_plot_configs(
-        args_dict, file_registry)
+    output_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
+            file_registry, output_raster_plot_tuples)
 
-    intermediate_raster_plot_configs = (
-        sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
-            args_dict, file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES))
+    intermediate_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
+            file_registry, INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES)
 
     raster_plot_configs = RasterPlotConfigGroup(
         input_raster_plot_configs,
@@ -106,11 +102,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         [(id, 'input') for (id, _) in INPUT_RASTER_PLOT_TUPLES],
         args_dict, file_registry, model_spec)
     output_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
-        [(id, 'output') for id in _get_output_raster_plot_ids(args_dict)],
+        [(id, 'output') for (id, _, _) in output_raster_plot_tuples],
         args_dict, file_registry, model_spec)
     intermediate_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
         [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
         args_dict, file_registry, model_spec)
+    intermediate_raster_caption = (
+        sdr_ndr_utils.update_caption_with_stream_map_info(
+            intermediate_raster_caption, args_dict['flow_dir_algorithm']))
 
     captions = RasterPlotCaptionGroup(
         inputs=input_raster_caption,
@@ -118,7 +117,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         intermediates=intermediate_raster_caption)
 
     results_vector_id = 'watershed_results_ndr'
-    results_vector_cols_to_sum = _get_vector_cols_to_sum(args_dict)
+    results_vector_cols_to_sum = _get_nutrient_dependent_list(
+        args_dict, RESULTS_VECTOR_COL_NAMES)
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
