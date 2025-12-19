@@ -92,7 +92,17 @@ COLORMAPS = {
     'continuous': 'viridis',
     'divergent': 'BrBG',
     'nominal': 'tab20',
-    'binary': ListedColormap(["#3a3a3a", "#12cced"]),
+    # Use `binary` where `1` pixels are likely to be adjacent to white
+    # background and/or `0` pixels, as in what_drains_to_stream maps, e.g.
+    # This `1` color has good (but not especially high) contrast against both
+    # black (the `0` color) and white (the figure background).
+    'binary': ListedColormap(["#000000", "#aa44dd"]),
+    # Use `binary_high_contrast` where `1` pixels are likely to be adjacent
+    # to `0` pixels and other `1` pixels but _not_ to white background,
+    # as in stream network maps, e.g.
+    # The `1` color has very high contrast against the `0` color but
+    # very low contrast against white (the figure background).
+    'binary_high_contrast': ListedColormap(["#1a1a1a", "#4de4ff"]),
 }
 RESAMPLE_ALGS = {
     'continuous': 'bilinear',
@@ -162,7 +172,10 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
         transform_list = ['linear'] * n_plots
     for ax, tif, dtype, transform in zip(
             axes.flatten(), tif_list, datatype_list, transform_list):
-        arr, resampled = read_masked_array(tif, RESAMPLE_ALGS[dtype])
+        resample_alg = (RESAMPLE_ALGS['binary']
+                        if dtype.startswith('binary')
+                        else RESAMPLE_ALGS[dtype])
+        arr, resampled = read_masked_array(tif, resample_alg)
         legend = False
         imshow_kwargs = {}
         colorbar_kwargs = {}
@@ -175,7 +188,7 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
             else:
                 transform = matplotlib.colors.CenteredNorm()
             imshow_kwargs['norm'] = transform
-        if dtype == 'binary':
+        if dtype.startswith('binary'):
             transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
             # @TODO: ¿update imshow_kwargs['norm']?
             imshow_kwargs['vmin'] = -0.5
@@ -287,7 +300,10 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     cmap_str = COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
-    arr, resampled = read_masked_array(tif_list[0], RESAMPLE_ALGS[datatype])
+    resample_alg = (RESAMPLE_ALGS['binary']
+                    if datatype.startswith('binary')
+                    else RESAMPLE_ALGS[datatype])
+    arr, resampled = read_masked_array(tif_list[0], resample_alg)
     ndarray = numpy.empty((n_plots, *arr.shape))
     ndarray[0] = arr
     for i, tif in enumerate(tif_list):

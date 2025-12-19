@@ -22,7 +22,7 @@ OUTPUT_RASTER_PLOT_TUPLES = [
 INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES = [
     ('pit_filled_dem', 'continuous'),
     ('what_drains_to_stream', 'binary'),
-    ('stream', 'binary'),
+    ('stream', 'binary_high_contrast'),
 ]
 
 
