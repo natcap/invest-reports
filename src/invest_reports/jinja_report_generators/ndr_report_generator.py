@@ -44,21 +44,25 @@ RESULTS_VECTOR_COL_NAMES = {
 }
 
 
-def _get_output_raster_plot_tuples(args_dict):
-    output_raster_plot_tuples = []
+def _get_nutrient_dependent_list(args_dict, reference_dict):
+    """Build a list of items based on which nutrients were calculated.
+
+    Args:
+        args_dict (dict): The arguments that were passed to the model's
+            ``execute`` method.
+        reference_dict (dict[str, list[any]): The reference_dict to copy items
+            from. Must contain keys ``CALC_N`` and ``CALC_P``.
+
+    Returns:
+        A list of the items found in ``reference_dict[CALC_N]``,
+            ``reference_dict[CALC_P]``, or both, depending on the values in
+            ``args_dict``.
+    """
+    item_list = []
     for key in [CALC_N, CALC_P]:
         if args_dict[key]:
-            output_raster_plot_tuples.extend(
-                OUTPUT_RASTER_PLOT_TUPLES[key])
-    return output_raster_plot_tuples
-
-
-def _get_vector_cols_to_sum(args_dict):
-    vector_cols_to_sum = []
-    for key in [CALC_N, CALC_P]:
-        if args_dict[key]:
-            vector_cols_to_sum.extend(RESULTS_VECTOR_COL_NAMES[key])
-    return vector_cols_to_sum
+            item_list.extend(reference_dict[key])
+    return item_list
 
 
 def report(file_registry, args_dict, model_spec, target_html_filepath):
@@ -77,7 +81,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         ``None``
     """
 
-    output_raster_plot_tuples = _get_output_raster_plot_tuples(args_dict)
+    output_raster_plot_tuples = _get_nutrient_dependent_list(
+        args_dict, OUTPUT_RASTER_PLOT_TUPLES)
 
     input_raster_plot_configs = sdr_ndr_utils.build_raster_plot_configs(
         args_dict, INPUT_RASTER_PLOT_TUPLES)
@@ -112,7 +117,8 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         intermediates=intermediate_raster_caption)
 
     results_vector_id = 'watershed_results_ndr'
-    results_vector_cols_to_sum = _get_vector_cols_to_sum(args_dict)
+    results_vector_cols_to_sum = _get_nutrient_dependent_list(
+        args_dict, RESULTS_VECTOR_COL_NAMES)
 
     sdr_ndr_report_generator.report(
         file_registry, args_dict, model_spec, target_html_filepath,
