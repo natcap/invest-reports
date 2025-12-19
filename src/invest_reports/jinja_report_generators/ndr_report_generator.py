@@ -1,7 +1,7 @@
 from invest_reports import sdr_ndr_utils
 from invest_reports.jinja_report_generators import sdr_ndr_report_generator
 from invest_reports.sdr_ndr_utils import RasterPlotCaptionGroup
-from invest_reports.utils import RasterPlotConfig, RasterPlotConfigGroup
+from invest_reports.utils import RasterPlotConfigGroup
 
 CALC_N = 'calc_n'
 CALC_P = 'calc_p'
@@ -44,24 +44,13 @@ RESULTS_VECTOR_COL_NAMES = {
 }
 
 
-def _get_output_raster_plot_ids(args_dict):
-    output_raster_plot_ids = []
-    for key in [CALC_N, CALC_P]:
-        if (args_dict[key]):
-            output_raster_plot_ids.extend(
-                id for (id, _, _) in OUTPUT_RASTER_PLOT_TUPLES[key])
-    return output_raster_plot_ids
-
-
-def _build_output_raster_plot_configs(args_dict, file_registry):
+def _get_output_raster_plot_tuples(args_dict):
     output_raster_plot_tuples = []
     for key in [CALC_N, CALC_P]:
         if args_dict[key]:
             output_raster_plot_tuples.extend(
                 OUTPUT_RASTER_PLOT_TUPLES[key])
-    return [
-        RasterPlotConfig(file_registry[output_id], datatype, transform)
-        for (output_id, datatype, transform) in output_raster_plot_tuples]
+    return output_raster_plot_tuples
 
 
 def _get_vector_cols_to_sum(args_dict):
@@ -88,11 +77,14 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         ``None``
     """
 
+    output_raster_plot_tuples = _get_output_raster_plot_tuples(args_dict)
+
     input_raster_plot_configs = sdr_ndr_utils.build_input_raster_plot_configs(
         args_dict, INPUT_RASTER_PLOT_TUPLES)
 
-    output_raster_plot_configs = _build_output_raster_plot_configs(
-        args_dict, file_registry)
+    output_raster_plot_configs = (
+        sdr_ndr_utils.build_output_raster_plot_configs(
+            file_registry, output_raster_plot_tuples))
 
     intermediate_raster_plot_configs = (
         sdr_ndr_utils.build_intermediate_output_raster_plot_configs(
@@ -107,7 +99,7 @@ def report(file_registry, args_dict, model_spec, target_html_filepath):
         [(id, 'input') for (id, _) in INPUT_RASTER_PLOT_TUPLES],
         args_dict, file_registry, model_spec)
     output_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
-        [(id, 'output') for id in _get_output_raster_plot_ids(args_dict)],
+        [(id, 'output') for (id, _, _) in output_raster_plot_tuples],
         args_dict, file_registry, model_spec)
     intermediate_raster_caption = sdr_ndr_utils.generate_caption_from_raster_list(
         [(id, 'output') for (id, _) in INTERMEDIATE_OUTPUT_RASTER_PLOT_TUPLES],
