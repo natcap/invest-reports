@@ -181,7 +181,6 @@ class JinjaTemplateUnitTests(unittest.TestCase):
             '<div class="wide-table-wrapper" style="font-size: 0.875rem;" >',
             html)
         self.assertIn(table, html)
-        self.assertIn('', html)
 
     def test_wide_table_with_custom_font_size(self):
         """Test wide_table macro with custom font size."""
@@ -206,7 +205,6 @@ class JinjaTemplateUnitTests(unittest.TestCase):
             '<div class="wide-table-wrapper" style="font-size: 1.25rem;" >',
             html)
         self.assertIn(table, html)
-        self.assertIn('', html)
 
     def test_wide_table_minimum_font_size(self):
         """Test wide_table macro with custom font size that is too small."""
@@ -232,4 +230,3 @@ class JinjaTemplateUnitTests(unittest.TestCase):
             '<div class="wide-table-wrapper" style="font-size: 0.75rem;" >',
             html)
         self.assertIn(table, html)
-        self.assertIn('', html)
