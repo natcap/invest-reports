@@ -106,7 +106,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         main_table_root = lxml.html.document_fromstring(main_table)
 
-        # Make sure main table body has exactly 2 rows.
+        # Make sure main table body has exactly `num_features` rows.
         table_body_rows = main_table_root.xpath('.//table/tbody/tr')
         self.assertEqual(len(table_body_rows), num_features)
 
@@ -172,6 +172,8 @@ class SDRNDRUtilsTests(unittest.TestCase):
         """Return table with paginate flag when there are a lot of features."""
 
         num_features = 11
+        self.assertGreater(num_features,
+                           sdr_ndr_utils.TABLE_PAGINATION_THRESHOLD)
 
         (vector_data, dataframe) = _generate_mock_watershed_data(num_features)
         filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
@@ -183,8 +185,39 @@ class SDRNDRUtilsTests(unittest.TestCase):
                 filepath, cols_to_sum))
         self.assertIsNotNone(main_table)
 
-        # @TODO: check that num rows in tbody == num features in vector
-        # @TODO: make sure table has class 'datatable' AND has class 'paginate'
+        main_table_root = lxml.html.document_fromstring(main_table)
 
+        # Make sure main table body has exactly `num_features` rows.
+        table_body_rows = main_table_root.xpath('.//table/tbody/tr')
+        self.assertEqual(len(table_body_rows), num_features)
+
+        # Check main table values.
+        for (i, ws_data) in enumerate(vector_data):
+            html_table_row = table_body_rows[i]
+            # xpath positions are 1-indexed.
+            for (j, val) in enumerate(ws_data, start=1):
+                table_cell = html_table_row.xpath(f'./td[{j}]')
+                self.assertEqual(str(val), table_cell[0].text)
+
+        # Make sure main table has classes 'datatable' AND 'paginate'.
+        datatable_table = main_table_root.find_class('datatable')
+        self.assertEqual(len(datatable_table), 1)
+        paginated_table = main_table_root.find_class('paginate')
+        self.assertEqual(len(paginated_table), 1)
+
+        # Make sure totals table is not None.
         self.assertIsNotNone(totals_table)
-        # @TODO: check column headings and table content for accuracy
+
+        # Check totals table values.
+        totals_table_root = lxml.html.document_fromstring(totals_table)
+        table_body_rows = totals_table_root.xpath('.//table/tbody/tr')
+        totals_row = table_body_rows[0]
+        # calculated_value_1 is ws_id + 100; calculated_value_2 is ws_id + 200.
+        totals = [
+            101 + 102 + 103 + 104 + 105 + 106 + 107 + 108 + 109 + 110 + 111,
+            201 + 202 + 203 + 204 + 205 + 206 + 207 + 208 + 209 + 210 + 211
+        ]
+        # xpath positions are 1-indexed.
+        for (i, val) in enumerate(totals, start=1):
+            totals_cell = totals_row.xpath(f'./td[{i}]')
+            self.assertEqual(str(val), totals_cell[0].text)
