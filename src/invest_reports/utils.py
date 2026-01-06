@@ -18,13 +18,18 @@ from osgeo import gdal
 
 LOGGER = logging.getLogger(__name__)
 
-# MATPLOTLIB_PARAMS = {
-#     'legend.fontsize': 'small',
-#     'axes.titlesize': 'small',
-#     'xtick.labelsize': 'small',
-#     'ytick.labelsize': 'small'
-#     }
-# plt.rcParams.update(MATPLOTLIB_PARAMS)
+MATPLOTLIB_PARAMS = {
+    'backend': 'agg',
+    # 'legend.fontsize': 'small',
+    # 'axes.titlesize': 'small',
+    # 'xtick.labelsize': 'small',
+    # 'ytick.labelsize': 'small'
+    }
+plt.rcParams.update(MATPLOTLIB_PARAMS)
+MPL_SAVE_FIG_KWARGS = {
+    'format': 'png',
+    'bbox_inches': 'tight'
+}
 
 # We set report container max width to 80rem.
 # img is set to width:100%, but it's best if figures are sized to
@@ -147,35 +152,33 @@ def plot_choropleth(gdf, field_list):
     return fig
 
 
-def plot_raster_list(tif_list, datatype_list, transform_list=None):
+def plot_raster_list(raster_list: list[RasterPlotConfig]):
     """Plot a list of rasters.
 
     Args:
-        tif_list (list): list of filepaths to rasters
-        datatype_list (list): list of strings describing the data of each
-            raster. One of ('continuous', 'divergent', 'nominal', 'binary',
-            'binary_high_contrast').
-        transform_list (list): list of strings describing the
-            transformation to apply to the colormap.
-            Either 'linear' or 'log'.
+        raster_dtype_list (list[RasterPlotConfig]): a list of RasterPlotConfig
+            objects, each of which contains the path to a raster, the type
+            of data in the raster ('continuous', 'divergent', 'nominal',
+            'binary', or 'binary_high_contrast'), and the transformation to
+            apply to the colormap ('linear' or 'log').
 
     Returns:
         ``matplotlib.figure.Figure``
     """
-    raster_info = pygeoprocessing.get_raster_info(tif_list[0])
+    raster_info = pygeoprocessing.get_raster_info(raster_list[0].raster_path)
     bbox = raster_info['bounding_box']
-    n_plots = len(tif_list)
+    n_plots = len(raster_list)
 
     fig, axes = _figure_subplots(bbox, n_plots)
 
-    if transform_list is None:
-        transform_list = ['linear'] * n_plots
-    for ax, tif, dtype, transform in zip(
-            axes.flatten(), tif_list, datatype_list, transform_list):
+    for ax, config in zip(axes.flatten(), raster_list):
+        raster_path = config.raster_path
+        dtype = config.datatype
+        transform = config.transform
         resample_alg = (RESAMPLE_ALGS['binary']
                         if dtype.startswith('binary')
                         else RESAMPLE_ALGS[dtype])
-        arr, resampled = read_masked_array(tif, resample_alg)
+        arr, resampled = read_masked_array(raster_path, resample_alg)
         legend = False
         imshow_kwargs = {}
         colorbar_kwargs = {}
@@ -205,10 +208,10 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
                 color=colors[i], label=f'{values[i]}') for i in range(len(values))]
             legend = True
         ax.set_title(
-            label=f"{os.path.basename(tif)}{' (resampled)' if resampled else ''}",
+            label=f"{os.path.basename(raster_path)}{' (resampled)' if resampled else ''}",
             loc='left', y=1.12, pad=0,
             fontfamily='monospace', fontsize=14, fontweight=700)
-        units = _get_raster_units(tif)
+        units = _get_raster_units(raster_path)
         if units:
             ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
         if legend:
@@ -230,7 +233,7 @@ def base64_encode(figure):
         A string representing the figure as a base64-encoded PNG.
     """
     figfile = BytesIO()
-    figure.savefig(figfile, format='png', bbox_inches='tight')
+    figure.savefig(figfile, **MPL_SAVE_FIG_KWARGS)
     figfile.seek(0)  # rewind to beginning of file
     return base64.b64encode(figfile.getvalue()).decode('utf-8')
 
@@ -263,15 +266,7 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
         A string representing a base64-encoded PNG in which each of the
             provided rasters is plotted as a subplot.
     """
-    raster_path_list = [x.raster_path for x in raster_list]
-    datatype_list = [x.datatype for x in raster_list]
-    transform_list = [x.transform for x in raster_list]
-
-    figure = plot_raster_list(
-        raster_path_list,
-        datatype_list,
-        transform_list
-    )
+    figure = plot_raster_list(raster_list)
 
     return base64_encode(figure)
 
