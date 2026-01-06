@@ -75,6 +75,7 @@ class SDRNDRUtilsTests(unittest.TestCase):
 
         # Check values.
         ws_1_data = vector_data[0]
+        # xpath positions are 1-indexed.
         for (i, val) in enumerate(ws_1_data, start=1):
             ws_1_cell = ws_1_row.xpath(f'./td[{i}]')
             self.assertEqual(str(val), ws_1_cell[0].text)
@@ -114,22 +115,22 @@ class SDRNDRUtilsTests(unittest.TestCase):
         ws_1_cells = ws_1_row.xpath('./td')
         self.assertEqual(len(ws_1_cells), 4)
 
-        # @TODO: get this working
-        # # Check main table column headings for accuracy.
-        # table_header_rows = main_table_root.xpath('.//table/thead/tr')
-        # table_header_row = table_header_rows[0]
-        # col_names = MAIN_TABLE_COLS
-        # for (i, col_name) in enumerate(col_names, start=1):
-        #     col_header = table_header_row.xpath(f'./th{i}')
-        #     self.assertEqual(col_name, col_header[0].text)
+        # Check main table column headings for accuracy.
+        table_header_rows = main_table_root.xpath('.//table/thead/tr')
+        table_header_row = table_header_rows[0]
+        col_names = MAIN_TABLE_COLS
+        # xpath positions are 1-indexed.
+        for (i, col_name) in enumerate(col_names, start=1):
+            col_header = table_header_row.xpath(f'./th[{i}]')
+            self.assertEqual(col_name, col_header[0].text)
 
-        # @TODO: get this working
-        # # Check main table values.
-        # for (i, ws_data) in enumerate(vector_data):
-        #     html_table_row = table_body_rows[i]
-        #     for (j, val) in enumerate(ws_data, start=1):
-        #         table_cell = html_table_row.xpath(f'./td{j}')
-        #         self.assertEqual(str(val), table_cell[0].text)
+        # Check main table values.
+        for (i, ws_data) in enumerate(vector_data):
+            html_table_row = table_body_rows[i]
+            # xpath positions are 1-indexed.
+            for (j, val) in enumerate(ws_data, start=1):
+                table_cell = html_table_row.xpath(f'./td[{j}]')
+                self.assertEqual(str(val), table_cell[0].text)
 
         # Make sure main table has class 'datatable' but not 'paginate'.
         datatable_table = main_table_root.find_class('datatable')
@@ -151,17 +152,18 @@ class SDRNDRUtilsTests(unittest.TestCase):
         totals_cells = totals_row.xpath('./td')
         self.assertEqual(len(totals_cells), 2)
 
-        # @TODO: get this working
-        # # Check totals table column headings for accuracy.
-        # table_header_rows = totals_table_root.xpath('.//table/thead/tr')
-        # table_header_row = table_header_rows[0]
-        # for (i, col_name) in enumerate(cols_to_sum, start=1):
-        #     col_header = table_header_row.xpath(f'./td{i}')
-        #     self.assertEqual(col_name, col_header[0].text)
+        # Check totals table column headings for accuracy.
+        table_header_rows = totals_table_root.xpath('.//table/thead/tr')
+        table_header_row = table_header_rows[0]
+        # xpath positions are 1-indexed. Skip first (empty) th and start at 2.
+        for (i, col_name) in enumerate(cols_to_sum, start=2):
+            col_header = table_header_row.xpath(f'./th[{i}]')
+            self.assertEqual(col_name, col_header[0].text)
 
         # Check totals table values.
         # calculated_value_1 is ws_id + 100; calculated_value_2 is ws_id + 200.
         totals = [101 + 102, 201 + 202]
+        # xpath positions are 1-indexed.
         for (i, val) in enumerate(totals, start=1):
             totals_cell = totals_row.xpath(f'./td[{i}]')
             self.assertEqual(str(val), totals_cell[0].text)
