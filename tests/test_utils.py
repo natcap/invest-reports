@@ -12,31 +12,27 @@ from osgeo import osr
 import invest_reports.utils
 from invest_reports.utils import MPL_SAVE_FIG_KWARGS
 
+projection = osr.SpatialReference()
+projection.ImportFromEPSG(3857)
+PROJ_WKT = projection.ExportToWkt()
+
 
 def save_figure(fig, filepath):
     fig.savefig(filepath, **MPL_SAVE_FIG_KWARGS)
 
 
 def make_simple_raster(target_filepath, shape):
-    projection = osr.SpatialReference()
-    projection.ImportFromEPSG(3857)
-    projection_wkt = projection.ExportToWkt()
-
     array = numpy.linspace(0, 1, num=numpy.multiply(*shape)).reshape(*shape)
     pygeoprocessing.numpy_array_to_raster(
         array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
-        projection_wkt=projection_wkt, target_path=target_filepath)
+        projection_wkt=PROJ_WKT, target_path=target_filepath)
 
 
 def make_simple_nominal_raster(target_filepath, shape):
-    projection = osr.SpatialReference()
-    projection.ImportFromEPSG(3857)
-    projection_wkt = projection.ExportToWkt()
-
     array = numpy.arange(0, numpy.multiply(*shape), 1).reshape(*shape)
     pygeoprocessing.numpy_array_to_raster(
         array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
-        projection_wkt=projection_wkt, target_path=target_filepath)
+        projection_wkt=PROJ_WKT, target_path=target_filepath)
 
 
 def compare_snapshots(reference, actual):
@@ -154,25 +150,64 @@ class RasterPlotConfig(unittest.TestCase):
             'continuous')
         make_simple_raster(continuous_raster.raster_path, shape)
 
-        projection = osr.SpatialReference()
-        projection.ImportFromEPSG(3857)
-        projection_wkt = projection.ExportToWkt()
-
         binary_raster = invest_reports.utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'binary.tif'),
             'binary')
         binary_array = numpy.zeros(shape=shape)
         binary_array[0] = 1
         pygeoprocessing.numpy_array_to_raster(
-            binary_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
-            projection_wkt=projection_wkt, target_path=binary_raster.raster_path)
+            binary_array, target_nodata=None, pixel_size=(1, 1),
+            origin=(0, 0), projection_wkt=PROJ_WKT,
+            target_path=binary_raster.raster_path)
+
+        divergent_raster = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'divergent.tif'),
+            'divergent')
+        divergent_array = numpy.linspace(
+            -1, 1, num=numpy.multiply(*shape)).reshape(*shape)
+        pygeoprocessing.numpy_array_to_raster(
+            divergent_array, target_nodata=None, pixel_size=(1, 1),
+            origin=(0, 0), projection_wkt=PROJ_WKT,
+            target_path=divergent_raster.raster_path)
 
         nominal_raster = invest_reports.utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'nominal.tif'),
             'nominal')
         make_simple_nominal_raster(nominal_raster.raster_path, shape)
 
-        config_list = [continuous_raster, nominal_raster, binary_raster]
+        config_list = [
+            continuous_raster, nominal_raster, binary_raster, divergent_raster]
+        fig = invest_reports.utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_different_transforms(self):
+        """Test figure plots for different transforms."""
+        figname = 'plot_raster_list_transforms.png'
+        reference = os.path.join(self.refs_dir, figname)
+        shape = (2, 8)
+        continuous_raster_linear = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'continuous.tif'),
+            'continuous', 'linear')
+        continuous_raster_log = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'continuous.tif'),
+            'continuous', 'log')
+        make_simple_raster(continuous_raster_linear.raster_path, shape)
+
+        divergent_raster_log = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'divergent.tif'),
+            'divergent', 'log')
+        divergent_array = numpy.linspace(
+            -1, 1, num=numpy.multiply(*shape)).reshape(*shape)
+        pygeoprocessing.numpy_array_to_raster(
+            divergent_array, target_nodata=None, pixel_size=(1, 1),
+            origin=(0, 0), projection_wkt=PROJ_WKT,
+            target_path=divergent_raster_log.raster_path)
+
+        config_list = [
+            continuous_raster_linear, continuous_raster_log,
+            divergent_raster_log]
         fig = invest_reports.utils.plot_raster_list(config_list)
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)

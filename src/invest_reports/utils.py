@@ -4,6 +4,7 @@ import logging
 import math
 import os
 from io import BytesIO
+from enum import Enum
 
 import geometamaker
 import numpy
@@ -14,6 +15,7 @@ from matplotlib.colors import ListedColormap
 import pandas
 import yaml
 from osgeo import gdal
+from pydantic.dataclasses import dataclass
 
 
 LOGGER = logging.getLogger(__name__)
@@ -45,25 +47,71 @@ FIGURE_WIDTH = 14.5  # inches; by trial & error
 # and uses scientific notation where appropriate.
 pandas.set_option('display.float_format', '{:G}'.format)
 
+# Mapping 'datatype' to colormaps and resampling algorithms
+COLORMAPS = {
+    'continuous': 'viridis',
+    'divergent': 'BrBG',
+    'nominal': 'tab20',
+    # This `1` color has good (but not especially high) contrast against both
+    # black (the `0` color) and white (the figure background).
+    'binary': ListedColormap(["#000000", "#aa44dd"]),
+    # The `1` color has very high contrast against the `0` color but
+    # very low contrast against white (the figure background).
+    'binary_high_contrast': ListedColormap(["#1a1a1a", "#4de4ff"]),
+}
+RESAMPLE_ALGS = {
+    'continuous': 'bilinear',
+    'divergent': 'bilinear',
+    'nominal': 'nearest',
+    'binary': 'nearest',
+    'binary_high_contrast': 'nearest'
+}
 
+
+class RasterDatatype(str, Enum):
+    binary = 'binary'
+    """
+    Use `binary` where `1` pixels are likely to be adjacent to white
+    background and `0` (black) pixels, as in what_drains_to_stream maps.
+    """
+    binary_high_contrast = 'binary_high_contrast'
+    """
+    Use `binary_high_contrast` where `1` pixels are likely to be surrounded
+    # by `0` pixels but _not_ adjacent to white background,
+    # as in stream network maps.
+    """
+    continuous = 'continuous'
+    """For numeric data."""
+    divergent = 'divergent'
+    """For rasters where values span positive and negative values."""
+    nominal = 'nominal'
+    """For rasters where the pixel values represent categories."""
+
+
+class RasterTransform(str, Enum):
+    """The transformation to apply to values before mapping to colors.
+
+    Original values are plotted, but the colorbar will be use this scale.
+    """
+    linear = 'linear'
+    log = 'log'
+
+
+@dataclass
 class RasterPlotConfig:
-    def __init__(self,
-                 raster_path: str,
-                 datatype: str,
-                 transform: str | None = None):
-        self.raster_path = raster_path
-        self.datatype = datatype
-        self.transform = transform if not None else 'linear'
+    """A definition for how to plot a raster."""
+    raster_path: str
+    """Filepath to a raster to plot."""
+    datatype: RasterDatatype
+    """Datatype will determine colormap, legend, and resampling algorithm"""
+    transform: RasterTransform = RasterTransform.linear
+    """For highly skewed data, a transformation can help reveal variation."""
 
 
 class RasterPlotConfigGroup:
-    def __init__(self,
-                 inputs: list[RasterPlotConfig],
-                 outputs: list[RasterPlotConfig],
-                 intermediates: list[RasterPlotConfig]):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.intermediates = intermediates
+    inputs: list[RasterPlotConfig] = []
+    outputs: list[RasterPlotConfig] = []
+    intermediates: list[RasterPlotConfig] = []
 
 
 def read_masked_array(filepath, resample_method):
@@ -90,31 +138,6 @@ def read_masked_array(filepath, resample_method):
         array = pygeoprocessing.raster_to_numpy_array(filepath)
     masked_array = numpy.where(array == nodata, numpy.nan, array)
     return (masked_array, resampled)
-
-
-# Mapping 'datatype' to colormaps and resampling algorithms
-COLORMAPS = {
-    'continuous': 'viridis',
-    'divergent': 'BrBG',
-    'nominal': 'tab20',
-    # Use `binary` where `1` pixels are likely to be adjacent to white
-    # background and/or `0` pixels, as in what_drains_to_stream maps, e.g.
-    # This `1` color has good (but not especially high) contrast against both
-    # black (the `0` color) and white (the figure background).
-    'binary': ListedColormap(["#000000", "#aa44dd"]),
-    # Use `binary_high_contrast` where `1` pixels are likely to be adjacent
-    # to `0` pixels and other `1` pixels but _not_ to white background,
-    # as in stream network maps, e.g.
-    # The `1` color has very high contrast against the `0` color but
-    # very low contrast against white (the figure background).
-    'binary_high_contrast': ListedColormap(["#1a1a1a", "#4de4ff"]),
-}
-RESAMPLE_ALGS = {
-    'continuous': 'bilinear',
-    'divergent': 'bilinear',
-    'nominal': 'nearest',
-    'binary': 'nearest',
-}
 
 
 def _get_aspect_ratio(map_bbox):
@@ -163,7 +186,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
     """Plot a list of rasters.
 
     Args:
-        raster_dtype_list (list[RasterPlotConfig]): a list of RasterPlotConfig
+        raster_list (list[RasterPlotConfig]): a list of RasterPlotConfig
             objects, each of which contains the path to a raster, the type
             of data in the raster ('continuous', 'divergent', 'nominal',
             'binary', or 'binary_high_contrast'), and the transformation to
@@ -182,9 +205,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
         raster_path = config.raster_path
         dtype = config.datatype
         transform = config.transform
-        resample_alg = (RESAMPLE_ALGS['binary']
-                        if dtype.startswith('binary')
-                        else RESAMPLE_ALGS[dtype])
+        resample_alg = RESAMPLE_ALGS[dtype]
         arr, resampled = read_masked_array(raster_path, resample_alg)
         imshow_kwargs = {}
         colorbar_kwargs = {}
@@ -199,7 +220,6 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             imshow_kwargs['norm'] = transform
         if dtype.startswith('binary'):
             transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
-            # @TODO: ¿update imshow_kwargs['norm']?
             imshow_kwargs['vmin'] = -0.5
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
@@ -226,7 +246,7 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             }
             if xy_ratio > 1:
                 legend_kwargs['ncol'] = math.ceil(xy_ratio) * 2
-                legend_kwargs['bbox_to_anchor'] = (0, 0)
+                legend_kwargs['bbox_to_anchor'] = (-0.01, 0)
             leg = ax.legend(handles=patches, **legend_kwargs)
             leg.set_in_layout(True)
         else:
