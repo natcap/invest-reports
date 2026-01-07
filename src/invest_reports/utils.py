@@ -117,8 +117,11 @@ RESAMPLE_ALGS = {
 }
 
 
-def _choose_n_rows_n_cols(map_bbox, n_plots):
-    xy_ratio = (map_bbox[2] - map_bbox[0]) / (map_bbox[3] - map_bbox[1])
+def _get_aspect_ratio(map_bbox):
+    return (map_bbox[2] - map_bbox[0]) / (map_bbox[3] - map_bbox[1])
+
+
+def _choose_n_rows_n_cols(xy_ratio, n_plots):
     if xy_ratio <= 1:
         n_cols = 3
     elif xy_ratio > 4:
@@ -129,22 +132,26 @@ def _choose_n_rows_n_cols(map_bbox, n_plots):
     if n_cols > n_plots:
         n_cols = n_plots
     n_rows = int(math.ceil(n_plots / n_cols))
-    return n_rows, n_cols, xy_ratio
+    return n_rows, n_cols
 
 
-def _figure_subplots(map_bbox, n_plots):
-    n_rows, n_cols, xy_ratio = _choose_n_rows_n_cols(map_bbox, n_plots)
+def _figure_subplots(xy_ratio, n_plots):
+    n_rows, n_cols = _choose_n_rows_n_cols(xy_ratio, n_plots)
 
     sub_width = FIGURE_WIDTH / n_cols
     sub_height = (sub_width / xy_ratio) + 1.0  # in; expand vertically for title & subtitle
-    return plt.subplots(
+    fig, axs = plt.subplots(
         n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height),
         layout='constrained')
+    if n_plots == 1:
+        axs = numpy.array([axs])
+    return fig, axs
 
 
 def plot_choropleth(gdf, field_list):
     n_plots = len(field_list)
-    fig, axes = _figure_subplots(gdf.total_bounds, n_plots)
+    xy_ratio = _get_aspect_ratio(gdf.total_bounds)
+    fig, axes = _figure_subplots(xy_ratio, n_plots)
     for ax, field in zip(axes.flatten(), field_list):
         gdf.plot(ax=ax, column=field, cmap="Greens", edgecolor='lightgray')
         ax.set(title=f"{field}")
@@ -168,10 +175,10 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
     raster_info = pygeoprocessing.get_raster_info(raster_list[0].raster_path)
     bbox = raster_info['bounding_box']
     n_plots = len(raster_list)
+    xy_ratio = _get_aspect_ratio(bbox)
+    fig, axs = _figure_subplots(xy_ratio, n_plots)
 
-    fig, axes = _figure_subplots(bbox, n_plots)
-
-    for ax, config in zip(axes.flatten(), raster_list):
+    for ax, config in zip(axs.flatten(), raster_list):
         raster_path = config.raster_path
         dtype = config.datatype
         transform = config.transform
@@ -179,7 +186,6 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
                         if dtype.startswith('binary')
                         else RESAMPLE_ALGS[dtype])
         arr, resampled = read_masked_array(raster_path, resample_alg)
-        legend = False
         imshow_kwargs = {}
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
@@ -198,6 +204,13 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
         mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+        ax.set_title(
+            label=f"{os.path.basename(raster_path)}{' (resampled)' if resampled else ''}",
+            loc='left', y=1.12, pad=0,
+            fontfamily='monospace', fontsize=14, fontweight=700)
+        units = _get_raster_units(raster_path)
+        if units:
+            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
         if dtype == 'nominal':
             # typically a 'nominal' raster would be an int type, but we replaced
             # nodata with nan, so the array is now a float.
@@ -206,20 +219,19 @@ def plot_raster_list(raster_list: list[RasterPlotConfig]):
             colors = [mappable.cmap(mappable.norm(value)) for value in values]
             patches = [matplotlib.patches.Patch(
                 color=colors[i], label=f'{values[i]}') for i in range(len(values))]
-            legend = True
-        ax.set_title(
-            label=f"{os.path.basename(raster_path)}{' (resampled)' if resampled else ''}",
-            loc='left', y=1.12, pad=0,
-            fontfamily='monospace', fontsize=14, fontweight=700)
-        units = _get_raster_units(raster_path)
-        if units:
-            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
-        if legend:
-            leg = ax.legend(handles=patches, bbox_to_anchor=(1.02, 1), loc=2)
-            leg.set_in_layout(False)
+            legend_kwargs = {
+                'ncol': 1,
+                'loc': 'upper left',
+                'bbox_to_anchor': (1.02, 1)  # place 'loc' corner here
+            }
+            if xy_ratio > 1:
+                legend_kwargs['ncol'] = math.ceil(xy_ratio) * 2
+                legend_kwargs['bbox_to_anchor'] = (0, 0)
+            leg = ax.legend(handles=patches, **legend_kwargs)
+            leg.set_in_layout(True)
         else:
             fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
-    [ax.set_axis_off() for ax in axes.flatten()]
+    [ax.set_axis_off() for ax in axs.flatten()]
     return fig
 
 

@@ -28,6 +28,17 @@ def make_simple_raster(target_filepath, shape):
         projection_wkt=projection_wkt, target_path=target_filepath)
 
 
+def make_simple_nominal_raster(target_filepath, shape):
+    projection = osr.SpatialReference()
+    projection.ImportFromEPSG(3857)
+    projection_wkt = projection.ExportToWkt()
+
+    array = numpy.arange(0, numpy.multiply(*shape), 1).reshape(*shape)
+    pygeoprocessing.numpy_array_to_raster(
+        array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+        projection_wkt=projection_wkt, target_path=target_filepath)
+
+
 def compare_snapshots(reference, actual):
     ref, ext = os.path.splitext(reference)
     new_reference = f'{ref}_fail{ext}'
@@ -102,6 +113,108 @@ class RasterPlotLayoutTests(unittest.TestCase):
         make_simple_raster(self.raster_config.raster_path, shape)
 
         config_list = [self.raster_config]*3
+        fig = invest_reports.utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_single(self):
+        """Test figure has 1 plot."""
+        figname = 'plot_raster_list_single.png'
+        reference = os.path.join(self.refs_dir, figname)
+        shape = (4, 4)
+        make_simple_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]
+        fig = invest_reports.utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
+class RasterPlotConfig(unittest.TestCase):
+    """Unit tests for datatype and transform options."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.refs_dir = os.path.join('tests', 'refs')
+        
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_raster_list_different_datatypes(self):
+        """Test figure plots for different datatypes."""
+        figname = 'plot_raster_list_datatypes.png'
+        reference = os.path.join(self.refs_dir, figname)
+        shape = (2, 8)
+        continuous_raster = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'continuous.tif'),
+            'continuous')
+        make_simple_raster(continuous_raster.raster_path, shape)
+
+        projection = osr.SpatialReference()
+        projection.ImportFromEPSG(3857)
+        projection_wkt = projection.ExportToWkt()
+
+        binary_raster = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'binary.tif'),
+            'binary')
+        binary_array = numpy.zeros(shape=shape)
+        binary_array[0] = 1
+        pygeoprocessing.numpy_array_to_raster(
+            binary_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+            projection_wkt=projection_wkt, target_path=binary_raster.raster_path)
+
+        nominal_raster = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'nominal.tif'),
+            'nominal')
+        make_simple_nominal_raster(nominal_raster.raster_path, shape)
+
+        config_list = [continuous_raster, nominal_raster, binary_raster]
+        fig = invest_reports.utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+
+class RasterPlotLegends(unittest.TestCase):
+    """Unit tests for legend placement on nominal rasters."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.refs_dir = os.path.join('tests', 'refs')
+        self.raster_config = invest_reports.utils.RasterPlotConfig(
+            os.path.join(self.workspace_dir, 'foo.tif'),
+            'nominal', 'linear')
+        
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_raster_list_tall_nominal(self):
+        """Test legend is single column on right side."""
+        figname = 'plot_raster_list_tall_nominal.png'
+        reference = os.path.join(self.refs_dir, figname)
+        shape = (4, 4)
+        make_simple_nominal_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]
+        fig = invest_reports.utils.plot_raster_list(config_list)
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
+
+    def test_plot_raster_list_wide_nominal(self):
+        """Test legend is multi-column below plot."""
+        figname = 'plot_raster_list_wide_nominal.png'
+        reference = os.path.join(self.refs_dir, figname)
+        shape = (2, 8)
+        make_simple_nominal_raster(self.raster_config.raster_path, shape)
+
+        config_list = [self.raster_config]
         fig = invest_reports.utils.plot_raster_list(config_list)
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
