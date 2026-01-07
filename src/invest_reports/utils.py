@@ -344,7 +344,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     # instead of storing all arrays in memory
     vmin = numpy.nanmin(ndarray)
     vmax = numpy.nanmax(ndarray)
-    cmap = plt.cm.get_cmap(cmap_str)
+    cmap = plt.get_cmap(cmap_str)
     if datatype == 'divergent':
         if transform == 'log':
             normalizer = matplotlib.colors.SymLogNorm(linthresh=0.03, vmin=vmin, vmax=vmax)
