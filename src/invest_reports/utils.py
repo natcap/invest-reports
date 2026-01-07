@@ -171,17 +171,6 @@ def _figure_subplots(xy_ratio, n_plots):
     return fig, axs
 
 
-def plot_choropleth(gdf, field_list):
-    n_plots = len(field_list)
-    xy_ratio = _get_aspect_ratio(gdf.total_bounds)
-    fig, axes = _figure_subplots(xy_ratio, n_plots)
-    for ax, field in zip(axes.flatten(), field_list):
-        gdf.plot(ax=ax, column=field, cmap="Greens", edgecolor='lightgray')
-        ax.set(title=f"{field}")
-    [ax.set_axis_off() for ax in axes.flatten()]
-    return fig
-
-
 def plot_raster_list(raster_list: list[RasterPlotConfig]):
     """Plot a list of rasters.
 
