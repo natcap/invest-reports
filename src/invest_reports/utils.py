@@ -108,10 +108,11 @@ class RasterPlotConfig:
     """For highly skewed data, a transformation can help reveal variation."""
 
 
+@dataclass
 class RasterPlotConfigGroup:
-    inputs: list[RasterPlotConfig] = []
-    outputs: list[RasterPlotConfig] = []
-    intermediates: list[RasterPlotConfig] = []
+    inputs: list[RasterPlotConfig] | None
+    outputs: list[RasterPlotConfig] | None
+    intermediates: list[RasterPlotConfig] | None
 
 
 def read_masked_array(filepath, resample_method):
