@@ -18,7 +18,9 @@ PROJ_WKT = projection.ExportToWkt()
 
 
 def save_figure(fig, filepath):
-    fig.savefig(filepath, **MPL_SAVE_FIG_KWARGS)
+    # Overriding the default dpi to reduce file size since
+    # these figures are under source control.
+    fig.savefig(filepath, **MPL_SAVE_FIG_KWARGS, dpi=50)
 
 
 def make_simple_raster(target_filepath, shape):
