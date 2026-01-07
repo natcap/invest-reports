@@ -16,6 +16,8 @@ projection = osr.SpatialReference()
 projection.ImportFromEPSG(3857)
 PROJ_WKT = projection.ExportToWkt()
 
+REFS_DIR = os.path.join('tests', 'refs')
+
 
 def save_figure(fig, filepath):
     # Overriding the default dpi to reduce file size since
@@ -68,7 +70,6 @@ class RasterPlotLayoutTests(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.refs_dir = os.path.join('tests', 'refs')
         self.raster_config = invest_reports.utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
             'continuous', 'linear')
@@ -80,7 +81,7 @@ class RasterPlotLayoutTests(unittest.TestCase):
     def test_plot_raster_list_square_aoi(self):
         """Test figure has 1 row and 3 columns."""
         figname = 'plot_raster_list_square_aoi.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (4, 4)
         make_simple_raster(self.raster_config.raster_path, shape)
 
@@ -93,7 +94,7 @@ class RasterPlotLayoutTests(unittest.TestCase):
     def test_plot_raster_list_wide_aoi(self):
         """Test figure has 2 rows and 2 columns."""
         figname = 'plot_raster_list_wide_aoi.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
         make_simple_raster(self.raster_config.raster_path, shape)
 
@@ -106,7 +107,7 @@ class RasterPlotLayoutTests(unittest.TestCase):
     def test_plot_raster_list_tall_aoi(self):
         """Test figure has 1 rows and 3 columns."""
         figname = 'plot_raster_list_tall_aoi.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (8, 2)
         make_simple_raster(self.raster_config.raster_path, shape)
 
@@ -119,7 +120,7 @@ class RasterPlotLayoutTests(unittest.TestCase):
     def test_plot_raster_list_single(self):
         """Test figure has 1 plot."""
         figname = 'plot_raster_list_single.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (4, 4)
         make_simple_raster(self.raster_config.raster_path, shape)
 
@@ -136,7 +137,6 @@ class RasterPlotConfig(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.refs_dir = os.path.join('tests', 'refs')
         
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -145,7 +145,7 @@ class RasterPlotConfig(unittest.TestCase):
     def test_plot_raster_list_different_datatypes(self):
         """Test figure plots for different datatypes."""
         figname = 'plot_raster_list_datatypes.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
         continuous_raster = invest_reports.utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
@@ -187,7 +187,7 @@ class RasterPlotConfig(unittest.TestCase):
     def test_plot_raster_list_different_transforms(self):
         """Test figure plots for different transforms."""
         figname = 'plot_raster_list_transforms.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
         continuous_raster_linear = invest_reports.utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'continuous.tif'),
@@ -222,7 +222,6 @@ class RasterPlotLegends(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.refs_dir = os.path.join('tests', 'refs')
         self.raster_config = invest_reports.utils.RasterPlotConfig(
             os.path.join(self.workspace_dir, 'foo.tif'),
             'nominal', 'linear')
@@ -234,7 +233,7 @@ class RasterPlotLegends(unittest.TestCase):
     def test_plot_raster_list_tall_nominal(self):
         """Test legend is single column on right side."""
         figname = 'plot_raster_list_tall_nominal.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (4, 4)
         make_simple_nominal_raster(self.raster_config.raster_path, shape)
 
@@ -247,7 +246,7 @@ class RasterPlotLegends(unittest.TestCase):
     def test_plot_raster_list_wide_nominal(self):
         """Test legend is multi-column below plot."""
         figname = 'plot_raster_list_wide_nominal.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (2, 8)
         make_simple_nominal_raster(self.raster_config.raster_path, shape)
 
@@ -264,7 +263,6 @@ class RasterPlotFacets(unittest.TestCase):
     def setUp(self):
         """Override setUp function to create temp workspace directory."""
         self.workspace_dir = tempfile.mkdtemp()
-        self.refs_dir = os.path.join('tests', 'refs')
         
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -273,7 +271,7 @@ class RasterPlotFacets(unittest.TestCase):
     def test_plot_raster_facets(self):
         """Test rasters share a common colorscale."""
         figname = 'plot_raster_facets.png'
-        reference = os.path.join(self.refs_dir, figname)
+        reference = os.path.join(REFS_DIR, figname)
         shape = (4, 4)
         a_raster_filepath = os.path.join(self.workspace_dir, 'a.tif')
         b_raster_filepath = os.path.join(self.workspace_dir, 'b.tif')
