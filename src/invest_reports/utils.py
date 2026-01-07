@@ -314,8 +314,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     Args:
         tif_list (list): list of filepaths to rasters
         datatype (str): string describing the datatype of rasters. One of
-            ('continuous', 'divergent', 'nominal', 'binary',
-            'binary_high_contrast').
+            ('continuous', 'divergent').
         transform (str): string describing the transformation to apply
             to the colormap. Either 'linear' or 'log'.
 
@@ -323,14 +322,15 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
     bbox = raster_info['bounding_box']
     n_plots = len(tif_list)
-    fig, axes = _figure_subplots(bbox, n_plots)
+    xy_ratio = _get_aspect_ratio(bbox)
+    fig, axes = _figure_subplots(xy_ratio, n_plots)
 
     cmap_str = COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
-    resample_alg = (RESAMPLE_ALGS['binary']
-                    if datatype.startswith('binary')
-                    else RESAMPLE_ALGS[datatype])
+    if subtitle_list is None:
+        subtitle_list = ['']*n_plots
+    resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
     arr, resampled = read_masked_array(tif_list[0], resample_alg)
     ndarray = numpy.empty((n_plots, *arr.shape))
     ndarray[0] = arr
@@ -357,10 +357,16 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
         cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
     else:
         normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
-    for arr, ax, subtitle in zip(ndarray, axes.flatten(), subtitle_list):
+    for arr, ax, tif, subtitle in zip(ndarray, axes.flatten(), tif_list, subtitle_list):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
-        ax.set(
-            title=f"{os.path.basename(tif)}{'*' if resampled else ''}\n{subtitle}")
+        # all rasters are identical size; `resampled` will be the same for all
+        ax.set_title(
+            label=f"{os.path.basename(tif)}{' (resampled)' if resampled else ''}\n{subtitle}",
+            loc='left', y=1.12, pad=0,
+            fontfamily='monospace', fontsize=14, fontweight=700)
+        units = _get_raster_units(tif)
+        if units:
+            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
         fig.colorbar(mappable, ax=ax)
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig

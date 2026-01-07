@@ -254,3 +254,38 @@ class RasterPlotLegends(unittest.TestCase):
         actual_png = os.path.join(self.workspace_dir, figname)
         save_figure(fig, actual_png)
         compare_snapshots(reference, actual_png)
+
+
+class RasterPlotFacets(unittest.TestCase):
+    """Unit tests for plotting multiple rasters on the same colorscale."""
+
+    def setUp(self):
+        """Override setUp function to create temp workspace directory."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.refs_dir = os.path.join('tests', 'refs')
+        
+    def tearDown(self):
+        """Override tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_plot_raster_facets(self):
+        """Test rasters share a common colorscale."""
+        figname = 'plot_raster_facets.png'
+        reference = os.path.join(self.refs_dir, figname)
+        shape = (4, 4)
+        a_raster_filepath = os.path.join(self.workspace_dir, 'a.tif')
+        b_raster_filepath = os.path.join(self.workspace_dir, 'b.tif')
+        a_array = numpy.linspace(0, 1, num=numpy.multiply(*shape)).reshape(*shape)
+        b_array = numpy.linspace(1, 2, num=numpy.multiply(*shape)).reshape(*shape)
+        pygeoprocessing.numpy_array_to_raster(
+            a_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+            projection_wkt=PROJ_WKT, target_path=a_raster_filepath)
+        pygeoprocessing.numpy_array_to_raster(
+            b_array, target_nodata=None, pixel_size=(1, 1), origin=(0, 0),
+            projection_wkt=PROJ_WKT, target_path=b_raster_filepath)
+        
+        fig = invest_reports.utils.plot_raster_facets(
+            [a_raster_filepath, b_raster_filepath], 'continuous')
+        actual_png = os.path.join(self.workspace_dir, figname)
+        save_figure(fig, actual_png)
+        compare_snapshots(reference, actual_png)
