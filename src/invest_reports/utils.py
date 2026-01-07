@@ -4,6 +4,7 @@ import logging
 import math
 import os
 from io import BytesIO
+from enum import Enum
 
 import geometamaker
 import numpy
@@ -14,17 +15,23 @@ from matplotlib.colors import ListedColormap
 import pandas
 import yaml
 from osgeo import gdal
+from pydantic.dataclasses import dataclass
 
 
 LOGGER = logging.getLogger(__name__)
 
-# MATPLOTLIB_PARAMS = {
-#     'legend.fontsize': 'small',
-#     'axes.titlesize': 'small',
-#     'xtick.labelsize': 'small',
-#     'ytick.labelsize': 'small'
-#     }
-# plt.rcParams.update(MATPLOTLIB_PARAMS)
+MATPLOTLIB_PARAMS = {
+    'backend': 'agg',
+    # 'legend.fontsize': 'small',
+    # 'axes.titlesize': 'small',
+    # 'xtick.labelsize': 'small',
+    # 'ytick.labelsize': 'small'
+    }
+plt.rcParams.update(MATPLOTLIB_PARAMS)
+MPL_SAVE_FIG_KWARGS = {
+    'format': 'png',
+    'bbox_inches': 'tight'
+}
 
 # We set report container max width to 80rem.
 # img is set to width:100%, but it's best if figures are sized to
@@ -40,25 +47,72 @@ FIGURE_WIDTH = 14.5  # inches; by trial & error
 # and uses scientific notation where appropriate.
 pandas.set_option('display.float_format', '{:G}'.format)
 
+# Mapping 'datatype' to colormaps and resampling algorithms
+COLORMAPS = {
+    'continuous': 'viridis',
+    'divergent': 'BrBG',
+    'nominal': 'tab20',
+    # This `1` color has good (but not especially high) contrast against both
+    # black (the `0` color) and white (the figure background).
+    'binary': ListedColormap(["#000000", "#aa44dd"]),
+    # The `1` color has very high contrast against the `0` color but
+    # very low contrast against white (the figure background).
+    'binary_high_contrast': ListedColormap(["#1a1a1a", "#4de4ff"]),
+}
+RESAMPLE_ALGS = {
+    'continuous': 'bilinear',
+    'divergent': 'bilinear',
+    'nominal': 'nearest',
+    'binary': 'nearest',
+    'binary_high_contrast': 'nearest'
+}
 
+
+class RasterDatatype(str, Enum):
+    binary = 'binary'
+    """
+    Use `binary` where `1` pixels are likely to be adjacent to white
+    background and `0` (black) pixels, as in what_drains_to_stream maps.
+    """
+    binary_high_contrast = 'binary_high_contrast'
+    """
+    Use `binary_high_contrast` where `1` pixels are likely to be surrounded
+    # by `0` pixels but _not_ adjacent to white background,
+    # as in stream network maps.
+    """
+    continuous = 'continuous'
+    """For numeric data."""
+    divergent = 'divergent'
+    """For rasters where values span positive and negative values."""
+    nominal = 'nominal'
+    """For rasters where the pixel values represent categories."""
+
+
+class RasterTransform(str, Enum):
+    """The transformation to apply to values before mapping to colors.
+
+    Original values are plotted, but the colorbar will be use this scale.
+    """
+    linear = 'linear'
+    log = 'log'
+
+
+@dataclass
 class RasterPlotConfig:
-    def __init__(self,
-                 raster_path: str,
-                 datatype: str,
-                 transform: str | None = None):
-        self.raster_path = raster_path
-        self.datatype = datatype
-        self.transform = transform if not None else 'linear'
+    """A definition for how to plot a raster."""
+    raster_path: str
+    """Filepath to a raster to plot."""
+    datatype: RasterDatatype
+    """Datatype will determine colormap, legend, and resampling algorithm"""
+    transform: RasterTransform = RasterTransform.linear
+    """For highly skewed data, a transformation can help reveal variation."""
 
 
+@dataclass
 class RasterPlotConfigGroup:
-    def __init__(self,
-                 inputs: list[RasterPlotConfig],
-                 outputs: list[RasterPlotConfig],
-                 intermediates: list[RasterPlotConfig]):
-        self.inputs = inputs
-        self.outputs = outputs
-        self.intermediates = intermediates
+    inputs: list[RasterPlotConfig] | None
+    outputs: list[RasterPlotConfig] | None
+    intermediates: list[RasterPlotConfig] | None
 
 
 def read_masked_array(filepath, resample_method):
@@ -87,33 +141,11 @@ def read_masked_array(filepath, resample_method):
     return (masked_array, resampled)
 
 
-# Mapping 'datatype' to colormaps and resampling algorithms
-COLORMAPS = {
-    'continuous': 'viridis',
-    'divergent': 'BrBG',
-    'nominal': 'tab20',
-    # Use `binary` where `1` pixels are likely to be adjacent to white
-    # background and/or `0` pixels, as in what_drains_to_stream maps, e.g.
-    # This `1` color has good (but not especially high) contrast against both
-    # black (the `0` color) and white (the figure background).
-    'binary': ListedColormap(["#000000", "#aa44dd"]),
-    # Use `binary_high_contrast` where `1` pixels are likely to be adjacent
-    # to `0` pixels and other `1` pixels but _not_ to white background,
-    # as in stream network maps, e.g.
-    # The `1` color has very high contrast against the `0` color but
-    # very low contrast against white (the figure background).
-    'binary_high_contrast': ListedColormap(["#1a1a1a", "#4de4ff"]),
-}
-RESAMPLE_ALGS = {
-    'continuous': 'bilinear',
-    'divergent': 'bilinear',
-    'nominal': 'nearest',
-    'binary': 'nearest',
-}
+def _get_aspect_ratio(map_bbox):
+    return (map_bbox[2] - map_bbox[0]) / (map_bbox[3] - map_bbox[1])
 
 
-def _choose_n_rows_n_cols(map_bbox, n_plots):
-    xy_ratio = (map_bbox[2] - map_bbox[0]) / (map_bbox[3] - map_bbox[1])
+def _choose_n_rows_n_cols(xy_ratio, n_plots):
     if xy_ratio <= 1:
         n_cols = 3
     elif xy_ratio > 4:
@@ -124,59 +156,47 @@ def _choose_n_rows_n_cols(map_bbox, n_plots):
     if n_cols > n_plots:
         n_cols = n_plots
     n_rows = int(math.ceil(n_plots / n_cols))
-    return n_rows, n_cols, xy_ratio
+    return n_rows, n_cols
 
 
-def _figure_subplots(map_bbox, n_plots):
-    n_rows, n_cols, xy_ratio = _choose_n_rows_n_cols(map_bbox, n_plots)
+def _figure_subplots(xy_ratio, n_plots):
+    n_rows, n_cols = _choose_n_rows_n_cols(xy_ratio, n_plots)
 
     sub_width = FIGURE_WIDTH / n_cols
     sub_height = (sub_width / xy_ratio) + 1.0  # in; expand vertically for title & subtitle
-    return plt.subplots(
+    fig, axs = plt.subplots(
         n_rows, n_cols, figsize=(FIGURE_WIDTH, n_rows*sub_height),
         layout='constrained')
+    if n_plots == 1:
+        axs = numpy.array([axs])
+    return fig, axs
 
 
-def plot_choropleth(gdf, field_list):
-    n_plots = len(field_list)
-    fig, axes = _figure_subplots(gdf.total_bounds, n_plots)
-    for ax, field in zip(axes.flatten(), field_list):
-        gdf.plot(ax=ax, column=field, cmap="Greens", edgecolor='lightgray')
-        ax.set(title=f"{field}")
-    [ax.set_axis_off() for ax in axes.flatten()]
-    return fig
-
-
-def plot_raster_list(tif_list, datatype_list, transform_list=None):
+def plot_raster_list(raster_list: list[RasterPlotConfig]):
     """Plot a list of rasters.
 
     Args:
-        tif_list (list): list of filepaths to rasters
-        datatype_list (list): list of strings describing the data of each
-            raster. One of ('continuous', 'divergent', 'nominal', 'binary',
-            'binary_high_contrast').
-        transform_list (list): list of strings describing the
-            transformation to apply to the colormap.
-            Either 'linear' or 'log'.
+        raster_list (list[RasterPlotConfig]): a list of RasterPlotConfig
+            objects, each of which contains the path to a raster, the type
+            of data in the raster ('continuous', 'divergent', 'nominal',
+            'binary', or 'binary_high_contrast'), and the transformation to
+            apply to the colormap ('linear' or 'log').
 
     Returns:
         ``matplotlib.figure.Figure``
     """
-    raster_info = pygeoprocessing.get_raster_info(tif_list[0])
+    raster_info = pygeoprocessing.get_raster_info(raster_list[0].raster_path)
     bbox = raster_info['bounding_box']
-    n_plots = len(tif_list)
+    n_plots = len(raster_list)
+    xy_ratio = _get_aspect_ratio(bbox)
+    fig, axs = _figure_subplots(xy_ratio, n_plots)
 
-    fig, axes = _figure_subplots(bbox, n_plots)
-
-    if transform_list is None:
-        transform_list = ['linear'] * n_plots
-    for ax, tif, dtype, transform in zip(
-            axes.flatten(), tif_list, datatype_list, transform_list):
-        resample_alg = (RESAMPLE_ALGS['binary']
-                        if dtype.startswith('binary')
-                        else RESAMPLE_ALGS[dtype])
-        arr, resampled = read_masked_array(tif, resample_alg)
-        legend = False
+    for ax, config in zip(axs.flatten(), raster_list):
+        raster_path = config.raster_path
+        dtype = config.datatype
+        transform = config.transform
+        resample_alg = RESAMPLE_ALGS[dtype]
+        arr, resampled = read_masked_array(raster_path, resample_alg)
         imshow_kwargs = {}
         colorbar_kwargs = {}
         imshow_kwargs['norm'] = transform
@@ -190,11 +210,17 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
             imshow_kwargs['norm'] = transform
         if dtype.startswith('binary'):
             transform = matplotlib.colors.BoundaryNorm([0, 0.5, 1], cmap.N)
-            # @TODO: ¿update imshow_kwargs['norm']?
             imshow_kwargs['vmin'] = -0.5
             imshow_kwargs['vmax'] = 1.5
             colorbar_kwargs['ticks'] = [0, 1]
         mappable = ax.imshow(arr, cmap=cmap, **imshow_kwargs)
+        ax.set_title(
+            label=f"{os.path.basename(raster_path)}{' (resampled)' if resampled else ''}",
+            loc='left', y=1.12, pad=0,
+            fontfamily='monospace', fontsize=14, fontweight=700)
+        units = _get_raster_units(raster_path)
+        if units:
+            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
         if dtype == 'nominal':
             # typically a 'nominal' raster would be an int type, but we replaced
             # nodata with nan, so the array is now a float.
@@ -203,20 +229,19 @@ def plot_raster_list(tif_list, datatype_list, transform_list=None):
             colors = [mappable.cmap(mappable.norm(value)) for value in values]
             patches = [matplotlib.patches.Patch(
                 color=colors[i], label=f'{values[i]}') for i in range(len(values))]
-            legend = True
-        ax.set_title(
-            label=f"{os.path.basename(tif)}{' (resampled)' if resampled else ''}",
-            loc='left', y=1.12, pad=0,
-            fontfamily='monospace', fontsize=14, fontweight=700)
-        units = _get_raster_units(tif)
-        if units:
-            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
-        if legend:
-            leg = ax.legend(handles=patches, bbox_to_anchor=(1.02, 1), loc=2)
-            leg.set_in_layout(False)
+            legend_kwargs = {
+                'ncol': 1,
+                'loc': 'upper left',
+                'bbox_to_anchor': (1.02, 1)  # place 'loc' corner here
+            }
+            if xy_ratio > 1:
+                legend_kwargs['ncol'] = math.ceil(xy_ratio) * 2
+                legend_kwargs['bbox_to_anchor'] = (-0.01, 0)
+            leg = ax.legend(handles=patches, **legend_kwargs)
+            leg.set_in_layout(True)
         else:
             fig.colorbar(mappable, ax=ax, **colorbar_kwargs)
-    [ax.set_axis_off() for ax in axes.flatten()]
+    [ax.set_axis_off() for ax in axs.flatten()]
     return fig
 
 
@@ -230,7 +255,7 @@ def base64_encode(figure):
         A string representing the figure as a base64-encoded PNG.
     """
     figfile = BytesIO()
-    figure.savefig(figfile, format='png', bbox_inches='tight')
+    figure.savefig(figfile, **MPL_SAVE_FIG_KWARGS)
     figfile.seek(0)  # rewind to beginning of file
     return base64.b64encode(figfile.getvalue()).decode('utf-8')
 
@@ -263,15 +288,7 @@ def plot_and_base64_encode_rasters(raster_list: list[RasterPlotConfig]) -> str:
         A string representing a base64-encoded PNG in which each of the
             provided rasters is plotted as a subplot.
     """
-    raster_path_list = [x.raster_path for x in raster_list]
-    datatype_list = [x.datatype for x in raster_list]
-    transform_list = [x.transform for x in raster_list]
-
-    figure = plot_raster_list(
-        raster_path_list,
-        datatype_list,
-        transform_list
-    )
+    figure = plot_raster_list(raster_list)
 
     return base64_encode(figure)
 
@@ -287,8 +304,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     Args:
         tif_list (list): list of filepaths to rasters
         datatype (str): string describing the datatype of rasters. One of
-            ('continuous', 'divergent', 'nominal', 'binary',
-            'binary_high_contrast').
+            ('continuous', 'divergent').
         transform (str): string describing the transformation to apply
             to the colormap. Either 'linear' or 'log'.
 
@@ -296,14 +312,15 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     raster_info = pygeoprocessing.get_raster_info(tif_list[0])
     bbox = raster_info['bounding_box']
     n_plots = len(tif_list)
-    fig, axes = _figure_subplots(bbox, n_plots)
+    xy_ratio = _get_aspect_ratio(bbox)
+    fig, axes = _figure_subplots(xy_ratio, n_plots)
 
     cmap_str = COLORMAPS[datatype]
     if transform is None:
         transform = 'linear'
-    resample_alg = (RESAMPLE_ALGS['binary']
-                    if datatype.startswith('binary')
-                    else RESAMPLE_ALGS[datatype])
+    if subtitle_list is None:
+        subtitle_list = ['']*n_plots
+    resample_alg = resample_alg = RESAMPLE_ALGS[datatype]
     arr, resampled = read_masked_array(tif_list[0], resample_alg)
     ndarray = numpy.empty((n_plots, *arr.shape))
     ndarray[0] = arr
@@ -317,7 +334,7 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
     # instead of storing all arrays in memory
     vmin = numpy.nanmin(ndarray)
     vmax = numpy.nanmax(ndarray)
-    cmap = plt.cm.get_cmap(cmap_str)
+    cmap = plt.get_cmap(cmap_str)
     if datatype == 'divergent':
         if transform == 'log':
             normalizer = matplotlib.colors.SymLogNorm(linthresh=0.03, vmin=vmin, vmax=vmax)
@@ -330,10 +347,16 @@ def plot_raster_facets(tif_list, datatype, transform=None, subtitle_list=None):
         cmap.set_under(cmap.colors[0])  # values below vmin (0s) get this color
     else:
         normalizer = plt.Normalize(vmin=vmin, vmax=vmax)
-    for arr, ax, subtitle in zip(ndarray, axes.flatten(), subtitle_list):
+    for arr, ax, tif, subtitle in zip(ndarray, axes.flatten(), tif_list, subtitle_list):
         mappable = ax.imshow(arr, cmap=cmap, norm=normalizer)
-        ax.set(
-            title=f"{os.path.basename(tif)}{'*' if resampled else ''}\n{subtitle}")
+        # all rasters are identical size; `resampled` will be the same for all
+        ax.set_title(
+            label=f"{os.path.basename(tif)}{' (resampled)' if resampled else ''}\n{subtitle}",
+            loc='left', y=1.12, pad=0,
+            fontfamily='monospace', fontsize=14, fontweight=700)
+        units = _get_raster_units(tif)
+        if units:
+            ax.text(x=0.0, y=1.0, s=f'Units: {units}', fontsize=12)
         fig.colorbar(mappable, ax=ax)
     [ax.set_axis_off() for ax in axes.flatten()]
     return fig
